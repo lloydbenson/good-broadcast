@@ -2,7 +2,7 @@
 
 [**hapi**](https://github.com/hapijs/hapi) process monitoring
 
-[![Build Status](https://secure.travis-ci.org/hapijs/good.png)](http://travis-ci.org/hapijs/good-broadcast)
+[![Build Status](https://secure.travis-ci.org/hapijs/good-broadcast.png)](http://travis-ci.org/hapijs/good-broadcast)
 
 ### broadcasting logs
 
