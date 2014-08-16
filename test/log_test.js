@@ -50,21 +50,21 @@ describe('Log', function () {
             });
         });
 
-        it('doesn\'t loads a log file', function (done) {
+        it('does not load a log file', function (done) {
  
-            var expectedErr = '{ [Error: ENOENT, open \'test/fixtures/nofile.log\'] errno: 34, code: \'ENOENT\', path: \'test/fixtures/nofile.log\' }';
+            var expectedErr = { "errno": 34, "code": "ENOENT", "path": "test/fixtures/nofile.log" };
+            var trapConsole = console.error;
             Log.get('test/fixtures/nofile.log', 0, function (bytesRead, result) {
 
-                var trapConsole = console.log;
-                console.log = function(string) {
-
-                    expect(string).to.eql(expectedErr);
-                };
-                console.log = trapConsole;
+                console.error = trapConsole;
                 expect(bytesRead).to.eql(0);
                 expect(result).to.eql([]);
                 done();
             });
+            console.error = function(string) {
+
+                expect(string).to.eql(expectedErr);
+            };
         });
     });
 });
