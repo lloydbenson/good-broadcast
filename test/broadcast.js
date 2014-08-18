@@ -74,7 +74,7 @@ describe('Broadcast', function () {
         server.start( function () {
 
             var url = server.info.uri;
-            broadcast = ChildProcess.spawn('node', [broadcastPath, '-l', './test/fixtures/test_01.log', '-u', url, '-i', 5]);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', './test/fixtures/test_01.log', '-u', url, '-i', 5]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
@@ -158,6 +158,18 @@ describe('Broadcast', function () {
                 if (runCount++ === 0) {
 
                     expect(request.payload.events[0].id).to.equal('1369328753222-42369-62002');
+
+                    Fs.stat(logPath3, function (err, stat) {
+
+                        expect(err).to.not.exist;
+                        Fs.truncate(logPath3, stat.size, function (err) {
+
+                            expect(err).to.not.exist;
+                            Fs.writeFileSync(logPath3, nextData);
+                            console.log('fine should have changed')
+
+                        });
+                    });
                 }
                 else {
 
@@ -170,8 +182,8 @@ describe('Broadcast', function () {
         server.start( function () {
 
             var url = server.info.uri;
-            var stream = Fs.createWriteStream(logPath3, { flags: 'a' });
-            stream.write(data2);
+            Fs.writeFileSync(logPath3, data2);
+
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', logPath3, '-u', url, '-i', 5]);
             broadcast.stderr.on('data', function (data) {
 
@@ -183,18 +195,6 @@ describe('Broadcast', function () {
                 expect(code).to.equal(0);
                 done();
             });
-
-            setTimeout(function () {
-
-                Fs.stat(logPath3, function (err, stat) {
-
-                    Fs.truncate(logPath3, stat.size, function (err) {
-
-                        expect(err).to.not.exist;
-                        Fs.writeFileSync(logPath3, nextData);
-                    });
-                });
-            }, 300);
         });
     });
 
