@@ -186,8 +186,7 @@ describe('Broadcast', function () {
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', logPath3, '-u', url, '-i', 5]);
             broadcast.stderr.on('data', function (data) {
 
-                console.log(data.toString())
-                //expect(data.toString()).to.not.exist;
+                expect(data.toString()).to.not.exist;
             });
 
             broadcast.once('close', function (code) {
