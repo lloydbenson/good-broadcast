@@ -161,6 +161,7 @@ describe('Broadcast', function () {
 
                     Fs.stat(logPath3, function (err, stat) {
 
+                        expect(err).to.not.exist;
                         Fs.truncate(logPath3, stat.size, function (err) {
 
                             expect(err).to.not.exist;
