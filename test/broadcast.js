@@ -5,11 +5,71 @@ var Fs = require('fs');
 var Lab = require('lab');
 var Path = require('path');
 var Hapi = require('hapi');
+var Crypto = require('crypto');
+var Hoek = require('hoek');
 
 
 // Declare internals
 
-var internals = {};
+var internals = {
+    tempLogFolder: Path.join(__dirname, 'fixtures'),
+    inlineLogEntry: {
+        lineOne:{
+            event: 'request',
+            id: '1369328752975-42369-3828',
+            instance: 'http://localhost:8080',
+            labels: ['api','hapi'],
+            method: 'get',
+            path: '/test',
+            query: {},
+            responseTime: 71,
+            source: {
+                remoteAddress: '127.0.0.1'
+            },
+            statusCode: 200,
+            timestamp: 1369328752975,
+            toString: function() {
+                return JSON.stringify(this);
+            }
+        },
+        lineTwo:{
+            event: 'request',
+            id: '1369328753222-42369-62002',
+            instance: 'http://localhost:8080',
+            labels: ['api', 'hapi'],
+            method: 'get',
+            path: '/test',
+            query: {},
+            responseTime: 9,
+            source: {
+                remoteAddress: '127.0.0.1'
+            },
+            statusCode: 200,
+            timestamp: 1369328753222,
+            toString: function() {
+                return JSON.stringify(this);
+            }
+        },
+        lineThree: {
+            event: 'request',
+            id: '1469328953222-42369-1',
+            instance: 'http://localhost:8080',
+            labels: ['api', 'http'],
+            method: 'get',
+            path: '/test2',
+            query: {},
+            responseTime: 19,
+            source: {
+                remoteAddress: '127.0.0.1'
+            },
+            statusCode: 200,
+            timestamp: 1469328953222,
+            toString: function() {
+                return JSON.stringify(this);
+            }
+        }
+    }
+};
 
 
 // Test shortcuts
@@ -21,57 +81,61 @@ var after = lab.after;
 var describe = lab.describe;
 var it = lab.it;
 
+internals.createServer = function (options, handler) {
+    if (arguments.length === 1) {
+        handler = options;
+        options = {};
+    }
+
+    options = options || {};
+
+    options.host = options.host || '127.0.0.1';
+    options.port = options.port || 0;
+
+    var server = Hapi.createServer(options.host, options.port);
+
+    server.route({
+        path: '/',
+        method: 'POST',
+        handler: handler
+    });
+
+    return server;
+};
+
+
+internals.uniqueFilename = function (path) {
+
+    var name = [Date.now(), process.pid, Crypto.randomBytes(8).toString('hex')].join('-') + '.__test';
+    return Path.join(path, name);
+};
+
+
+internals.cleanupLogFile = function (path, done) {
+    return function(code) {
+        expect(code).to.equal(0);
+        Fs.unlinkSync(path);
+        done();
+    };
+};
+
 
 describe('Broadcast', function () {
 
     var broadcastPath = Path.join(__dirname, '..', 'bin', 'broadcast');
-    var lastBroadcastPath = Path.join(__dirname, '..', 'lib', 'lastBroadcast_request_log_test.004');
-    var logPath1 = Path.join(__dirname, 'request_log_test.001');
-    var logPath2 = Path.join(__dirname, 'request_log_test.002');
-    var logPath3 = Path.join(__dirname, 'request_log_test.003');
-    var logPath4 = Path.join(__dirname, 'request_log_test.004');
-    var logPath5 = Path.join(__dirname, 'request_log_test.005');
-    var logPath6 = Path.join(__dirname, 'request_log_test.006');
-    var logPath7 = Path.join(__dirname, 'request_log_test.007');
-    var opsLogPath1 = Path.join(__dirname, 'ops_log_test.001');
-    var broadcastJsonPath = Path.join(__dirname, 'broadcast.json');
 
-    var data1 = '{"event":"request","timestamp":1369328752975,"id":"1369328752975-42369-3828","instance":"http://localhost:8080","labels":["api","http"],' +
-        '"method":"get","path":"/test","query":{},"source":{"remoteAddress":"127.0.0.1"},"responseTime":71,"statusCode":200}';
-    var data2 = '{"event":"request","timestamp":1369328753222,"id":"1369328753222-42369-62002","instance":"http://localhost:8080","labels":["api","http"],' +
-        '"method":"get","path":"/test","query":{},"source":{"remoteAddress":"127.0.0.1"},"responseTime":9,"statusCode":200}';
-    var opsData1 = '{"event":"ops","timestamp":1375466329196,"os":{"load":[0.38671875,0.390625,0.51171875],"mem":{"total":3221225472,"free":2790420480},"uptime":5690647,"cpu":"70.81"},"proc":{"uptime":414,"mem":{"rss":204468224,"heapTotal":64403456,"heapUsed":29650600,"total":3221225472},"delay":0},"load":{"requests":{"8080":1007,"8443":178},"concurrents":{"8080":8,"8443":-7}}}';
-
-    var locations = [logPath1, logPath2, logPath3, logPath4, logPath5, logPath6, logPath7, opsLogPath1, broadcastJsonPath, lastBroadcastPath];
-    var cleanup = function (done) {
-        for (var i = 0, il = locations.length; i < il; ++i) {
-            if (Fs.existsSync(locations[i])) {
-                Fs.unlinkSync(locations[i]);
-            }
-        }
-
-        return done();
-    };
-
-    before(cleanup);
     it('sends log file to remote server', function (done) {
 
 
         var broadcast = null;
-        var server = Hapi.createServer('127.0.0.1', 0);
+        var server = internals.createServer(function (request, reply) {
 
-        server.route({
-            path: '/',
-            method: 'POST',
-            handler: function (request, reply) {
-
-                expect(request.payload.schema).to.equal('good.v1');
-                expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
-                broadcast.kill('SIGUSR2');
-            }
+            expect(request.payload.schema).to.equal('good.v1');
+            expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
+            broadcast.kill('SIGUSR2');
         });
 
-        server.start( function () {
+        server.start(function () {
 
             var url = server.info.uri;
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', './test/fixtures/test_01.log', '-u', url, '-i', 5]);
@@ -89,52 +153,41 @@ describe('Broadcast', function () {
     });
 
     it('handles a log file that grows', function (done) {
-
-        var nextData = '\n{"event":"request","timestamp"' +
-            ':1469328953222,"id":"1469328953222-42369-62002","instance":"http://localhost:8080","labels":["api","http"],"method":"get","path":"/test2","query":{},"source":' +
-            '{"remoteAddress":"127.0.0.1"},"responseTime":19,"statusCode":200}';
         var broadcast = null;
-        var server = Hapi.createServer('127.0.0.1', 0);
         var runCount = 0;
+        var server = internals.createServer(function (request, reply) {
+            var id = Hoek.reach(request, 'payload.events.0.id');
 
-        server.route({
-            path: '/',
-            method: 'POST',
-            handler: function (request, reply) {
+            expect(request.payload.schema).to.equal('good.v1');
+            if (runCount++ === 0) {
 
-                expect(request.payload.schema).to.equal('good.v1');
-                if (runCount++ === 0) {
+                expect(id).to.equal(internals.inlineLogEntry.lineTwo.id);
+            }
+            else {
 
-                    expect(request.payload.events[0].id).to.equal('1369328753222-42369-62002');
-                }
-                else {
-
-                    expect(request.payload.events[0].id).to.equal('1469328953222-42369-62002');
-                    broadcast.kill('SIGUSR2');
-                }
+                expect(id).to.equal(internals.inlineLogEntry.lineThree.id);
+                broadcast.kill('SIGUSR2');
             }
         });
 
-        server.start( function () {
+        server.start(function () {
 
             var url = server.info.uri;
-            var stream = Fs.createWriteStream(logPath2, { flags: 'a' });
-            stream.write(data2);
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', logPath2, '-u', url, '-i', 5]);
+            var log = internals.uniqueFilename(internals.tempLogFolder);
+            var stream = Fs.createWriteStream(log, { flags: 'a' });
+
+            stream.write(internals.inlineLogEntry.lineTwo.toString());
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 5]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
             });
 
-            broadcast.once('close', function (code) {
-
-                expect(code).to.equal(0);
-                done();
-            });
+            broadcast.once('close', internals.cleanupLogFile(log, done));
 
             setTimeout(function () {
 
-                stream.write(nextData);
+                stream.write(internals.inlineLogEntry.lineThree.toString());
                 stream.end();
             }, 300);
         });
@@ -142,97 +195,78 @@ describe('Broadcast', function () {
 
     it('handles a log file that gets truncated', function (done) {
 
-        var nextData = '{"event":"request","timestamp"' +
-            ':1469328953222,"id":"1469328953222-42369-62002","instance":"http://localhost:8080","labels":["http"],"method":"get","path":"/","query":{},"source":' +
-            '{"remoteAddress":"127.0.0.1"},"responseTime":19,"statusCode":200}';
+        var log = internals.uniqueFilename(internals.tempLogFolder);
         var broadcast = null;
-        var server = Hapi.createServer('127.0.0.1', 0);
         var runCount = 0;
+        var server = internals.createServer(function (request, reply) {
 
-        server.route({
-            path: '/',
-            method: 'POST',
-            handler: function (request, reply) {
+            var id = Hoek.reach(request, 'payload.events.0.id');
 
-                expect(request.payload.schema).to.equal('good.v1');
-                if (runCount++ === 0) {
+            expect(request.payload.schema).to.equal('good.v1');
+            if (runCount++ === 0) {
 
-                    expect(request.payload.events[0].id).to.equal('1369328753222-42369-62002');
+                expect(id).to.equal(internals.inlineLogEntry.lineTwo.id);
 
-                    Fs.stat(logPath3, function (err, stat) {
+                Fs.stat(log, function (err, stat) {
+
+                    expect(err).to.not.exist;
+                    Fs.truncate(log, stat.size, function (err) {
 
                         expect(err).to.not.exist;
-                        Fs.truncate(logPath3, stat.size, function (err) {
-
-                            expect(err).to.not.exist;
-                            Fs.writeFileSync(logPath3, nextData);
-                            console.log('fine should have changed')
-
-                        });
+                        Fs.writeFileSync(log, internals.inlineLogEntry.lineThree.toString());
                     });
-                }
-                else {
+                });
+            }
+            else {
 
-                    expect(request.payload.events[0].id).to.equal('1469328953222-42369-62002');
-                    broadcast.kill('SIGUSR2');
-                }
+                expect(id).to.equal(internals.inlineLogEntry.lineThree.id);
+                broadcast.kill('SIGUSR2');
             }
         });
 
-        server.start( function () {
+        server.start(function () {
 
             var url = server.info.uri;
-            Fs.writeFileSync(logPath3, data2);
 
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', logPath3, '-u', url, '-i', 5]);
+            Fs.writeFileSync(log, internals.inlineLogEntry.lineTwo.toString());
+
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 5]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
             });
 
-            broadcast.once('close', function (code) {
-
-                expect(code).to.equal(0);
-                done();
-            });
+            broadcast.once('close', internals.cleanupLogFile(log, done));
         });
     });
 
     it('works when broadcast process is restarted', function (done) {
 
-        var nextData = '\n{"event":"request","timestamp"' +
-            ':1469328953222,"id":"1469328953222-42369-62002","instance":"http://localhost:8080","labels":["api","http"],"method":"get","path":"/test2","query":{},"source":' +
-            '{"remoteAddress":"127.0.0.1"},"responseTime":19,"statusCode":200}';
+        var log = internals.uniqueFilename(internals.tempLogFolder);
         var broadcast1 = null;
         var broadcast2 = null;
-        var server = Hapi.createServer('127.0.0.1', 0);
         var runCount = 0;
 
-        server.route({
-            path: '/',
-            method: 'POST',
-            handler: function (request, reply) {
+        var server = internals.createServer(function (request, reply) {
+            expect(request.payload.schema).to.equal('good.v1');
+            if (runCount++ === 0) {
 
-                expect(request.payload.schema).to.equal('good.v1');
-                if (runCount++ === 0) {
+                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineTwo.id);
+                broadcast1 && broadcast1.kill('SIGUSR2');
+            }
+            else {
 
-                    expect(request.payload.events[0].id).to.equal('1369328753222-42369-62002');
-                    broadcast1 && broadcast1.kill('SIGUSR2');
-                }
-                else {
-
-                    expect(request.payload.events.length).to.be.greaterThan(0);
-                    broadcast2 && broadcast2.kill('SIGUSR2');
-                }
+                expect(request.payload.events.length).to.be.greaterThan(0);
+                broadcast2 && broadcast2.kill('SIGUSR2');
             }
         });
 
-        server.start( function () {
+        server.start(function () {
 
             var url = server.info.uri;
-            var stream = Fs.createWriteStream(logPath4, { flags: 'a' });
-            stream.write(data2);
-            broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', logPath4, '-u', url, '-i', 5]);
+            var stream = Fs.createWriteStream(log, { flags: 'a' });
+            stream.write(internals.inlineLogEntry.lineTwo.toString());
+            broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 5]);
             broadcast1.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
@@ -241,108 +275,85 @@ describe('Broadcast', function () {
             broadcast1.once('close', function (code) {
 
                 expect(code).to.equal(0);
-                broadcast2 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', logPath4, '-u', url, '-i', 5]);
+                broadcast2 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 5]);
                 broadcast2.stderr.on('data', function (data) {
 
                     expect(data.toString()).to.not.exist;
-
                 });
 
-                broadcast2.once('close', function (code) {
+                broadcast2.once('close', internals.cleanupLogFile(log, done));
 
-                    expect(code).to.equal(0);
-                    done();
-                });
-
-                stream.write(nextData);
+                stream.write('\n' + internals.inlineLogEntry.lineThree.toString());
             });
         });
     });
 
     it('sends log file to remote server using a config file', function (done) {
 
+        var config = internals.uniqueFilename(internals.tempLogFolder);
         var broadcast = null;
-        var server = Hapi.createServer('127.0.0.1', 0);
+        var server = internals.createServer(function (request, reply) {
 
-        server.route({
-            path: '/',
-            method: 'POST',
-            handler: function (request, reply) {
+            expect(request.payload.schema).to.equal('good.v1');
+            expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
 
-                expect(request.payload.schema).to.equal('good.v1');
-                expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
-                Fs.unlinkSync(broadcastJsonPath);
-                broadcast.kill('SIGUSR2');
-            }
+            broadcast.kill('SIGUSR2');
         });
 
-        server.start( function () {
+
+        server.start(function () {
 
             var url = server.info.uri;
             var configObj = {
                 url: url,
                 path: './test/fixtures/test_01.log',
-                interval: 5,
-                useLastIndex: false
+                interval: 5
             };
 
-            Fs.writeFileSync(broadcastJsonPath, JSON.stringify(configObj));
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', broadcastJsonPath]);
+            Fs.writeFileSync(config, JSON.stringify(configObj));
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
             });
 
-            broadcast.once('close', function (code) {
-
-                expect(code).to.equal(0);
-                done();
-            });
+            broadcast.once('close', internals.cleanupLogFile(config, done));
         });
     });
 
     it('handles a log file that has the wrong format', function (done) {
 
+        var log = internals.uniqueFilename(internals.tempLogFolder);
         var broadcast = null;
         var runCount = 0;
         var nextData = '{"event":"request","timestamp"' + ':1469328953222,"id":"1469328953222-42369-62002","instance":"http://localhost:8080","labels":["api","http"],"method":"get","path":"/test2","query":{},"source":' + '{"remoteAddress":"127.0.0.1"},"responseTime":19,"statusCode":200}';
-        var server = Hapi.createServer('127.0.0.1', 0);
+        var server = internals.createServer(function (request, reply) {
 
-        server.route({
-            path: '/',
-            method: 'POST',
-            handler: function (request, reply) {
+            expect(request.payload.schema).to.equal('good.v1');
 
-                expect(request.payload.schema).to.equal('good.v1');
-                if (runCount++ === 0) {
-
-                    expect(request.payload.events[0].id).to.equal('1469328953222-42369-62002');
-                }
-                broadcast.kill('SIGUSR2');
+            if (runCount++ === 0) {
+                expect(request.payload.events[0].id).to.equal('1469328953222-42369-62002');
             }
+            broadcast.kill('SIGUSR2');
         });
 
-        server.start( function () {
+        server.start(function () {
 
             var url = server.info.uri;
 
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', logPath6, '-u', url, '-i', 5]);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 5]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.exist;
                 broadcast.kill('SIGUSR2');
             });
 
-            broadcast.once('close', function (code) {
-
-                expect(code).to.equal(0);
-                done();
-            });
+            broadcast.once('close', internals.cleanupLogFile(log, done));
         });
 
-        var stream = Fs.createWriteStream(logPath6, { flags: 'a' });
-        stream.write(data1);
-        stream.write(data2);
+        var stream = Fs.createWriteStream(log, { flags: 'a' });
+        stream.write(internals.inlineLogEntry.lineOne.toString());
+        stream.write(internals.inlineLogEntry.lineTwo.toString());
 
         setTimeout(function () {
 
@@ -352,46 +363,36 @@ describe('Broadcast', function () {
 
     it('handles connection errors to remote server', function (done) {
 
+        var log = internals.uniqueFilename(internals.tempLogFolder);
         var broadcast = null;
-        var stream = Fs.createWriteStream(logPath7, { flags: 'a' });
-        stream.write(data2);
         var runCount = 0;
-        var nextData = '{"event":"request","timestamp"' + ':1469328953222,"id":"1469328953222-42369-62002","instance":"http://localhost:8080","labels":["api","http"],"method":"get","path":"/test2","query":{},"source":' + '{"remoteAddress":"127.0.0.1"},"responseTime":19,"statusCode":200}';
-        var server = Hapi.createServer('127.0.0.1', 0);
+        var stream = Fs.createWriteStream(log, { flags: 'a' });
+        stream.write(internals.inlineLogEntry.lineTwo.toString());
+        var server = internals.createServer(function (request, reply) {
 
-        server.route({
-            path: '/',
-            method: 'POST',
-            handler: function (request, reply) {
+            expect(request.payload.schema).to.equal('good.v1');
+            if (runCount++ === 0) {
 
-                expect(request.payload.schema).to.equal('good.v1');
-                if (runCount++ === 0) {
-
-                    expect(request.payload.events[0].id).to.equal('1369328753222-42369-62002');
-                    server.stop();
-                }
+                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineTwo.id);
+                server.stop();
             }
         });
 
-        server.start( function () {
+        server.start(function () {
 
             var url = server.info.uri;
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', logPath7, '-u', url, '-i', 5]);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 5]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.contain('ECONNREFUSED');
                 broadcast.kill('SIGUSR2');
             });
 
-            broadcast.once('close', function (code) {
-
-                expect(code).to.equal(0);
-                done();
-            });
+            broadcast.once('close', internals.cleanupLogFile(log, done));
 
             setTimeout(function () {
 
-                stream.write(nextData);
+                stream.write(internals.inlineLogEntry.lineThree.toString());
             }, 300);
         });
     });
@@ -399,20 +400,14 @@ describe('Broadcast', function () {
     it('sends ops log file to remote server', function (done) {
 
         var broadcast = null;
-        var server = Hapi.createServer('127.0.0.1', 0);
+        var server = internals.createServer(function (request, reply) {
 
-        server.route({
-            path: '/',
-            method: 'POST',
-            handler: function (request, reply) {
-
-                expect(request.payload.schema).to.equal('good.v1');
-                expect(request.payload.events[0].timestamp).to.equal(1375466329196);
-                broadcast.kill('SIGUSR2');
-            }
+            expect(request.payload.schema).to.equal('good.v1');
+            expect(request.payload.events[0].timestamp).to.equal(1375466329196);
+            broadcast.kill('SIGUSR2');
         });
 
-        server.start( function () {
+        server.start(function () {
 
             var url = server.info.uri;
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', './test/fixtures/test_ops.log', '-u', url, '-i', 5]);
@@ -431,47 +426,35 @@ describe('Broadcast', function () {
 
     it('handles a log file that exists when onlySendNew is enabled', function (done) {
 
-        var nextData = '\n{"event":"request","timestamp"' +
-            ':1469328953222,"id":"1469328953222-42369-62002","instance":"http://localhost:8080","labels":["api","http"],"method":"get","path":"/test2","query":{},"source":' +
-            '{"remoteAddress":"127.0.0.1"},"responseTime":19,"statusCode":200}';
+        var log = internals.uniqueFilename(internals.tempLogFolder);
         var broadcast = null;
 
-        var stream = Fs.createWriteStream(logPath2, { flags: 'a' });
-        stream.write(data1);
-        stream.write(data2);
-        var server = Hapi.createServer('127.0.0.1', 0);
+        var stream = Fs.createWriteStream(log, { flags: 'a' });
+        stream.write(internals.inlineLogEntry.lineOne.toString());
+        stream.write(internals.inlineLogEntry.lineTwo.toString());
 
-        server.route({
-            path: '/',
-            method: 'POST',
-            handler: function (request, reply) {
+        var server = internals.createServer(function (request, reply) {
 
-                expect(request.payload.schema).to.equal('good.v1');
-                expect(request.payload.events[0].id).to.equal('1469328953222-42369-62002');
-                broadcast.kill('SIGUSR2');
-            }
+            expect(request.payload.schema).to.equal('good.v1');
+            expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineThree.id);
+            broadcast.kill('SIGUSR2');
         });
 
-        server.start( function () {
+        server.start(function () {
 
             var url = server.info.uri;
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', logPath2, '-u', url, '-i', 5, '-n']);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 5, '-n']);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
             });
 
-            broadcast.once('close', function (code) {
-
-                expect(code).to.equal(0);
-                done();
-            });
+            broadcast.once('close', internals.cleanupLogFile(log, done));
 
             setTimeout(function () {
 
-                stream.write(nextData);
+                stream.write(internals.inlineLogEntry.lineThree.toString());
             }, 300);
         });
     });
-    after(cleanup);
 });
