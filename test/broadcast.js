@@ -459,4 +459,63 @@ describe('Broadcast', function () {
             }, 300);
         });
     });
+
+    it('honors -p (use last index) option for a new file', function (done) {
+
+        var log = internals.uniqueFilename(internals.tempLogFolder);
+        var stream = Fs.createWriteStream(log, { flags: 'a' });
+        var broadcast1 = null;
+        var broadcast2 = null;
+        var hitCount = 0;
+        var server = internals.createServer(function(request, reply) {
+
+            hitCount++;
+            expect(request.payload.schema).to.equal('good.v1');
+
+            if (hitCount === 1) {
+                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineOne.id);
+
+                broadcast1.kill('SIGUSR2');
+                stream.write('\n' + internals.inlineLogEntry.lineThree.toString());
+                stream.write('\n' + internals.inlineLogEntry.lineTwo.toString());
+
+            }
+            else {
+                expect(request.payload.events.length).to.equal(2);
+                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineThree.id);
+                expect(request.payload.events[1].id).to.equal(internals.inlineLogEntry.lineTwo.id);
+
+                broadcast2.kill('SIGUSR2');
+                server.kill();
+            }
+
+        });
+
+        stream.write(internals.inlineLogEntry.lineOne.toString());
+
+        server.start(function () {
+
+            var url = server.info.uri;
+            broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 1000]);
+            broadcast1.stderr.on('data', function (data) {
+console.log(data.toString())
+                //expect(data.toString()).to.not.exist;
+            });
+
+            broadcast1.once('close', function (code) {
+
+                expect(code).to.equal(0);
+
+                broadcast2 = ChildProcess.spawn('node-debug', [broadcastPath, '-l', log, '-u', url, '-i', 1000, '-p']);
+
+                broadcast2.stderr.on('data', function (data) {
+console.log(data.toString())
+                    //expect(data.toString()).to.not.exist;
+                });
+
+                broadcast2.once('close', internals.cleanupLogFile(log, done));
+            });
+        });
+
+    });
 });
