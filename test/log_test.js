@@ -52,7 +52,6 @@ describe('Log', function () {
 
         it('does not load a log file', function (done) {
  
-            var expectedErr = { "errno": 34, "code": "ENOENT", "path": "test/fixtures/nofile.log" };
             var trapConsole = console.error;
             Log.get('test/fixtures/nofile.log', 0, function (bytesRead, result) {
 
@@ -63,7 +62,7 @@ describe('Log', function () {
             });
             console.error = function(string) {
 
-                expect(string).to.eql(expectedErr);
+                expect(string).to.match(/ENOENT/);
             };
         });
     });
