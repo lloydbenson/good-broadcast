@@ -76,8 +76,6 @@ var internals = {
 
 var lab = exports.lab = Lab.script();
 var expect = Lab.expect;
-var before = lab.before;
-var after = lab.after;
 var describe = lab.describe;
 var it = lab.it;
 
@@ -120,6 +118,18 @@ internals.cleanupLogFile = function (path, done) {
 };
 
 
+internals.cleanFiles = function (path, callback) {
+    var lastIndex = Path.join(internals.tempLogFolder,'.lastIndex');
+    if (Fs.existsSync(path)) {
+        Fs.unlinkSync(path);
+    }
+    if (Fs.existsSync(lastIndex)) {
+        Fs.unlinkSync(lastIndex);
+    }
+    return callback();
+};
+
+
 describe('Broadcast', function () {
 
     var broadcastPath = Path.join(__dirname, '..', 'bin', 'broadcast');
@@ -139,7 +149,7 @@ describe('Broadcast', function () {
 
             var url = server.info.uri;
 
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', './test/fixtures/test_01.log', '-u', url, '-i', 1000]);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', './test/fixtures/test_01.log', '-u', url]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
@@ -178,13 +188,17 @@ describe('Broadcast', function () {
             var stream = Fs.createWriteStream(log, { flags: 'a' });
 
             stream.write(internals.inlineLogEntry.lineTwo.toString());
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 1000]);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
             });
 
-            broadcast.once('close', internals.cleanupLogFile(log, done));
+            broadcast.once('close', function(code) {
+
+                expect(code).to.equal(0);
+                internals.cleanFiles(log, done);
+            });
 
             setTimeout(function () {
 
@@ -231,13 +245,17 @@ describe('Broadcast', function () {
 
             Fs.writeFileSync(log, internals.inlineLogEntry.lineTwo.toString());
 
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 1000]);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
             });
 
-            broadcast.once('close', internals.cleanupLogFile(log, done));
+            broadcast.once('close', function(code) {
+
+                expect(code).to.equal(0);
+                internals.cleanFiles(log, done);
+            });
         });
     });
 
@@ -267,7 +285,7 @@ describe('Broadcast', function () {
             var url = server.info.uri;
             var stream = Fs.createWriteStream(log, { flags: 'a' });
             stream.write(internals.inlineLogEntry.lineTwo.toString());
-            broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 1000]);
+            broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
             broadcast1.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
@@ -276,13 +294,17 @@ describe('Broadcast', function () {
             broadcast1.once('close', function (code) {
 
                 expect(code).to.equal(0);
-                broadcast2 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 1000]);
+                broadcast2 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
                 broadcast2.stderr.on('data', function (data) {
 
                     expect(data.toString()).to.not.exist;
                 });
 
-                broadcast2.once('close', internals.cleanupLogFile(log, done));
+                broadcast2.once('close', function(code) {
+
+                    expect(code).to.equal(0);
+                    internals.cleanFiles(log, done);
+                });
 
                 stream.write('\n' + internals.inlineLogEntry.lineThree.toString());
             });
@@ -301,7 +323,6 @@ describe('Broadcast', function () {
             broadcast.kill('SIGUSR2');
         });
 
-
         server.start(function () {
 
             var url = server.info.uri;
@@ -312,14 +333,17 @@ describe('Broadcast', function () {
             };
 
             Fs.writeFileSync(config, JSON.stringify(configObj));
-            //process.execPath = 'node-debug'
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
             });
 
-            broadcast.once('close', internals.cleanupLogFile(config, done));
+            broadcast.once('close', function(code) {
+
+                expect(code).to.equal(0);
+                internals.cleanFiles(config, done);
+            });
         });
     });
 
@@ -343,14 +367,18 @@ describe('Broadcast', function () {
 
             var url = server.info.uri;
 
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 1000]);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.exist;
                 broadcast.kill('SIGUSR2');
             });
 
-            broadcast.once('close', internals.cleanupLogFile(log, done));
+            broadcast.once('close', function(code) {
+
+                expect(code).to.equal(0);
+                internals.cleanFiles(log, done);
+            });
         });
 
         var stream = Fs.createWriteStream(log, { flags: 'a' });
@@ -383,14 +411,18 @@ describe('Broadcast', function () {
         server.start(function () {
 
             var url = server.info.uri;
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 1000]);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.contain('ECONNREFUSED');
                 broadcast.kill('SIGUSR2');
             });
 
-            broadcast.once('close', internals.cleanupLogFile(log, done));
+            broadcast.once('close', function(code) {
+
+                expect(code).to.equal(0);
+                internals.cleanFiles(log, done);
+            });
 
             setTimeout(function () {
 
@@ -412,7 +444,7 @@ describe('Broadcast', function () {
         server.start(function () {
 
             var url = server.info.uri;
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', './test/fixtures/test_ops.log', '-u', url, '-i', 1000]);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', './test/fixtures/test_ops.log', '-u', url]);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
@@ -445,13 +477,17 @@ describe('Broadcast', function () {
         server.start(function () {
 
             var url = server.info.uri;
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 1000, '-n']);
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-n']);
             broadcast.stderr.on('data', function (data) {
 
                 expect(data.toString()).to.not.exist;
             });
 
-            broadcast.once('close', internals.cleanupLogFile(log, done));
+            broadcast.once('close', function(code) {
+
+                expect(code).to.equal(0);
+                internals.cleanFiles(log, done);
+            });
 
             setTimeout(function () {
 
@@ -460,7 +496,7 @@ describe('Broadcast', function () {
         });
     });
 
-    it('honors -p (use last index) option for a new file', function (done) {
+    it('honors -p (use last index) option', function (done) {
 
         var log = internals.uniqueFilename(internals.tempLogFolder);
         var stream = Fs.createWriteStream(log, { flags: 'a' });
@@ -486,7 +522,6 @@ describe('Broadcast', function () {
                 expect(request.payload.events[1].id).to.equal(internals.inlineLogEntry.lineTwo.id);
 
                 broadcast2.kill('SIGUSR2');
-                server.kill();
             }
 
         });
@@ -496,26 +531,30 @@ describe('Broadcast', function () {
         server.start(function () {
 
             var url = server.info.uri;
-            broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-i', 1000]);
+            broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-p']);
+
             broadcast1.stderr.on('data', function (data) {
-console.log(data.toString())
-                //expect(data.toString()).to.not.exist;
+
+                expect(data.toString()).to.not.exist;
             });
 
             broadcast1.once('close', function (code) {
 
                 expect(code).to.equal(0);
 
-                broadcast2 = ChildProcess.spawn('node-debug', [broadcastPath, '-l', log, '-u', url, '-i', 1000, '-p']);
+                broadcast2 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-p']);
 
                 broadcast2.stderr.on('data', function (data) {
-console.log(data.toString())
-                    //expect(data.toString()).to.not.exist;
+
+                    expect(data.toString()).to.not.exist;
                 });
 
-                broadcast2.once('close', internals.cleanupLogFile(log, done));
+                broadcast2.once('close', function(code) {
+
+                    expect(code).to.equal(0);
+                    internals.cleanFiles(log, done);
+                });
             });
         });
-
     });
 });
