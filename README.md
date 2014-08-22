@@ -12,6 +12,7 @@ good-broadcast includes a _'broadcast'_ script that is capable of broadcasting t
 
 where broadcast.json may look like:
 
+```json
 {
     "url": "http://analytics.mysite.com",
     "path": "/fullpath/request_services.log",
@@ -19,3 +20,4 @@ where broadcast.json may look like:
     "useLastIndex": false,
     "onlySendNew": true
 }
+```
