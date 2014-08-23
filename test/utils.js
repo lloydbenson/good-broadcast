@@ -46,7 +46,9 @@ describe('Utils', function () {
         it('throw an error if no callback supplied', function (done) {
 
             expect(function () {
+
                 Util.recursiveAsync(0, function (value, callback) {
+
                     callback(new Error('no callback'));
                 });
             }).to.throw('no callback');
