@@ -111,7 +111,7 @@ internals.uniqueFilename = function (path) {
 
 internals.cleanFiles = function (path, callback) {
 
-    var lastIndex = Path.join(internals.tempLogFolder,'.lastIndex');
+    var lastIndex = Path.join(internals.tempLogFolder,'.lastindex');
     if (Fs.existsSync(path)) {
         Fs.unlinkSync(path);
     }
