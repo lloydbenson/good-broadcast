@@ -14,5 +14,6 @@ process.on('exit', function() {
 
     ChildProcess.exec('rm -rf ' + internals.tempFolder, function (err) {});
 });
-
-Fs.mkdirSync(internals.tempFolder);
+if (!Fs.existsSync(internals.tempFolder)) {
+    Fs.mkdirSync(internals.tempFolder);
+}
