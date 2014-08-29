@@ -1,552 +1,472 @@
-// Load modules
+//Load modules
 
-var ChildProcess = require('child_process');
-var Fs = require('fs');
 var Lab = require('lab');
-var Path = require('path');
-var Hapi = require('hapi');
-var Crypto = require('crypto');
+var Broadcast = require('../lib/cli');
+var Utils = require('../lib/utils');
+var TestHelpers = require('./test_helpers');
+var Fs = require('fs');
 var Hoek = require('hoek');
+var Log = require('../lib/log');
 
-
-// Declare internals
-
-var internals = {
-    tempLogFolder: Path.join(__dirname, 'fixtures'),
-    inlineLogEntry: {
-        lineOne:{
-            event: 'request',
-            id: '1369328752975-42369-3828',
-            instance: 'http://localhost:8080',
-            labels: ['api','hapi'],
-            method: 'get',
-            path: '/test',
-            query: {},
-            responseTime: 71,
-            source: {
-                remoteAddress: '127.0.0.1'
-            },
-            statusCode: 200,
-            timestamp: 1369328752975,
-            toString: function() {
-                return JSON.stringify(this);
-            }
-        },
-        lineTwo:{
-            event: 'request',
-            id: '1369328753222-42369-62002',
-            instance: 'http://localhost:8080',
-            labels: ['api', 'hapi'],
-            method: 'get',
-            path: '/test',
-            query: {},
-            responseTime: 9,
-            source: {
-                remoteAddress: '127.0.0.1'
-            },
-            statusCode: 200,
-            timestamp: 1369328753222,
-            toString: function() {
-                return JSON.stringify(this);
-            }
-        },
-        lineThree: {
-            event: 'request',
-            id: '1469328953222-42369-1',
-            instance: 'http://localhost:8080',
-            labels: ['api', 'http'],
-            method: 'get',
-            path: '/test2',
-            query: {},
-            responseTime: 19,
-            source: {
-                remoteAddress: '127.0.0.1'
-            },
-            statusCode: 200,
-            timestamp: 1469328953222,
-            toString: function() {
-                return JSON.stringify(this);
-            }
-        }
-    }
-};
+require('./cleanup');
 
 
 // Test shortcuts
 
 var lab = exports.lab = Lab.script();
 var expect = Lab.expect;
+var before = lab.before;
+var after = lab.after;
 var describe = lab.describe;
 var it = lab.it;
 
-internals.createServer = function (options, handler) {
-    if (arguments.length === 1) {
-        handler = options;
-        options = {};
+// Declare internals
+
+var internals = {
+    getFrames: function(filter) {
+
+        var stack = new Error().stack.split('\n');
+        return stack.filter(function (item) {
+
+           return item.indexOf(filter) > -1;
+        });
     }
-
-    options = options || {};
-
-    options.host = options.host || '127.0.0.1';
-    options.port = options.port || 0;
-
-    var server = Hapi.createServer(options.host, options.port);
-
-    server.route({
-        path: '/',
-        method: 'POST',
-        handler: handler
-    });
-
-    return server;
-};
-
-
-internals.uniqueFilename = function (path) {
-
-    var name = [Date.now(), process.pid, Crypto.randomBytes(8).toString('hex')].join('-') + '.__test';
-    return Path.join(path, name);
-};
-
-
-internals.cleanFiles = function (path, callback) {
-
-    var lastIndex = Path.join(internals.tempLogFolder,'.lastindex');
-    if (Fs.existsSync(path)) {
-        Fs.unlinkSync(path);
-    }
-    if (Fs.existsSync(lastIndex)) {
-        Fs.unlinkSync(lastIndex);
-    }
-    return callback();
 };
 
 
 describe('Broadcast', function () {
 
-    var broadcastPath = Path.join(__dirname, '..', 'bin', 'broadcast');
+    describe('options', function () {
 
-    it('sends log file to remote server', function (done) {
+        it('accepts the command line style arguments', function (done) {
 
+            var server = TestHelpers.createTestServer(function (request, reply) {
 
-        var broadcast = null;
-        var server = internals.createServer(function (request, reply) {
-
-            expect(request.payload.schema).to.equal('good.v1');
-            expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
-            broadcast.kill('SIGUSR2');
-        });
-
-        server.start(function () {
-
-            var url = server.info.uri;
-
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', './test/fixtures/test_01.log', '-u', url]);
-            broadcast.stderr.on('data', function (data) {
-
-                expect(data.toString()).to.not.exist;
+                expect(request.payload.schema).to.equal('good.v1');
+                expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
             });
 
-            broadcast.once('close', function (code) {
+            server.start(function () {
+                var original = Utils.recursiveAsync;
 
-                expect(code).to.equal(0);
-                done();
-            });
-        });
-    });
+                Utils.recursiveAsync = function (init, iterator, error) {
 
-    it('handles a log file that grows', function (done) {
-        var broadcast = null;
-        var runCount = 0;
-        var server = internals.createServer(function (request, reply) {
-            var id = Hoek.reach(request, 'payload.events.0.id');
+                    expect(init.start).to.equal(0);
+                    expect(init.result.stats).to.exist;
+                    expect(init.previous.stats).to.exist;
 
-            expect(request.payload.schema).to.equal('good.v1');
-            if (runCount++ === 0) {
+                    iterator(init, function (error, value) {
 
-                expect(id).to.equal(internals.inlineLogEntry.lineTwo.id);
-            }
-            else {
+                        expect(error).to.not.exist;
+                        expect(value.start).to.equal(503);
+                        expect(init.result.stats).to.exist;
+                        expect(init.previous.stats).to.exist;
 
-                expect(id).to.equal(internals.inlineLogEntry.lineThree.id);
-                broadcast.kill('SIGUSR2');
-            }
-        });
-
-        server.start(function () {
-
-            var url = server.info.uri;
-            var log = internals.uniqueFilename(internals.tempLogFolder);
-            var stream = Fs.createWriteStream(log, { flags: 'a' });
-
-            stream.write(internals.inlineLogEntry.lineTwo.toString());
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
-            broadcast.stderr.on('data', function (data) {
-
-                expect(data.toString()).to.not.exist;
-            });
-
-            broadcast.once('close', function(code) {
-
-                expect(code).to.equal(0);
-                internals.cleanFiles(log, done);
-            });
-
-            setTimeout(function () {
-
-                stream.write(internals.inlineLogEntry.lineThree.toString());
-                stream.end();
-            }, 300);
-        });
-    });
-
-    it('handles a log file that gets truncated', function (done) {
-
-        var log = internals.uniqueFilename(internals.tempLogFolder);
-        var broadcast = null;
-        var runCount = 0;
-        var server = internals.createServer(function (request, reply) {
-
-            var id = Hoek.reach(request, 'payload.events.0.id');
-
-            expect(request.payload.schema).to.equal('good.v1');
-            if (runCount++ === 0) {
-
-                expect(id).to.equal(internals.inlineLogEntry.lineTwo.id);
-
-                Fs.stat(log, function (err, stat) {
-
-                    expect(err).to.not.exist;
-                    Fs.truncate(log, stat.size, function (err) {
-
-                        expect(err).to.not.exist;
-                        Fs.writeFileSync(log, internals.inlineLogEntry.lineThree.toString());
+                        Utils.recursiveAsync = original;
+                        done();
                     });
+                };
+
+                Broadcast.run(['-l','./test/fixtures/test_01.log','-u', server.info.uri]);
+            });
+        });
+
+        it('accepts an argument object', function (done) {
+
+            var server = TestHelpers.createTestServer(function (request, reply) {
+
+                expect(request.payload.schema).to.equal('good.v1');
+                expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
+            });
+
+            server.start(function () {
+
+                var original = Utils.recursiveAsync;
+
+                Utils.recursiveAsync = function (init, iterator, callback) {
+
+                    expect(init.start).to.equal(0);
+                    expect(init.result.stats).to.exist;
+                    expect(init.previous.stats).to.exist;
+
+                    iterator(init, function (error, value) {
+
+                        expect(error).to.not.exist;
+                        expect(value.start).to.equal(503);
+                        expect(init.result.stats).to.exist;
+                        expect(init.previous.stats).to.exist;
+
+                        Utils.recursiveAsync = original;
+                        done();
+                    });
+                };
+
+                Broadcast.run({
+                    path: './test/fixtures/test_01.log',
+                    url: server.info.uri
                 });
-            }
-            else {
-
-                expect(id).to.equal(internals.inlineLogEntry.lineThree.id);
-                broadcast.kill('SIGUSR2');
-            }
-        });
-
-        server.start(function () {
-
-            var url = server.info.uri;
-
-            Fs.writeFileSync(log, internals.inlineLogEntry.lineTwo.toString());
-
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
-            broadcast.stderr.on('data', function (data) {
-
-                expect(data.toString()).to.not.exist;
-            });
-
-            broadcast.once('close', function(code) {
-
-                expect(code).to.equal(0);
-                internals.cleanFiles(log, done);
             });
         });
-    });
 
-    it('works when broadcast process is restarted', function (done) {
+        it('accepts a configuration object (-c)', function (done) {
+            var config = TestHelpers.uniqueFilename();
+            var server = TestHelpers.createTestServer(function (request, reply) {
 
-        var log = internals.uniqueFilename(internals.tempLogFolder);
-        var broadcast1 = null;
-        var broadcast2 = null;
-        var runCount = 0;
-
-        var server = internals.createServer(function (request, reply) {
-            expect(request.payload.schema).to.equal('good.v1');
-            if (runCount++ === 0) {
-
-                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineTwo.id);
-                broadcast1 && broadcast1.kill('SIGUSR2');
-            }
-            else {
-
-                expect(request.payload.events.length).to.be.greaterThan(0);
-                broadcast2 && broadcast2.kill('SIGUSR2');
-            }
-        });
-
-        server.start(function () {
-
-            var url = server.info.uri;
-            var stream = Fs.createWriteStream(log, { flags: 'a' });
-            stream.write(internals.inlineLogEntry.lineTwo.toString());
-            broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
-            broadcast1.stderr.on('data', function (data) {
-
-                expect(data.toString()).to.not.exist;
+                expect(request.payload.schema).to.equal('good.v1');
+                expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
             });
 
-            broadcast1.once('close', function (code) {
+            server.start(function () {
 
-                expect(code).to.equal(0);
-                broadcast2 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
-                broadcast2.stderr.on('data', function (data) {
+                var original = Utils.recursiveAsync;
 
-                    expect(data.toString()).to.not.exist;
-                });
+                Utils.recursiveAsync = function (init, iterator, error) {
 
-                broadcast2.once('close', function(code) {
+                    expect(init.start).to.equal(0);
+                    expect(init.result.stats).to.exist;
+                    expect(init.previous.stats).to.exist;
 
-                    expect(code).to.equal(0);
-                    internals.cleanFiles(log, done);
-                });
+                    iterator(init, function (error, value) {
 
-                stream.write('\n' + internals.inlineLogEntry.lineThree.toString());
+                        expect(error).to.not.exist;
+                        expect(value.start).to.equal(503);
+                        expect(init.result.stats).to.exist;
+                        expect(init.previous.stats).to.exist;
+
+                        Utils.recursiveAsync = original;
+                        Fs.unlinkSync(config);
+                        done();
+                    });
+                };
+
+                var configObj = {
+                    url: server.info.uri,
+                    path: './test/fixtures/test_01.log'
+                };
+
+                Fs.writeFileSync(config, JSON.stringify(configObj));
+
+                Broadcast.run(['-c', config]);
+
             });
         });
-    });
 
-    it('sends log file to remote server using a config file', function (done) {
-
-        var config = internals.uniqueFilename(internals.tempLogFolder);
-        var broadcast = null;
-        var server = internals.createServer(function (request, reply) {
-
-            expect(request.payload.schema).to.equal('good.v1');
-            expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
-
-            broadcast.kill('SIGUSR2');
-        });
-
-        server.start(function () {
-
-            var url = server.info.uri;
+        it('throws an error for an invalid configuration object (-c)', function (done) {
+            var config = TestHelpers.uniqueFilename();
             var configObj = {
-                url: url,
-                path: './test/fixtures/test_01.log',
-                interval: 1000
+                url: 'http://127.0.0.1:31337',
+                path: './test/fixtures/test_01.log'
+            };
+            var log = console.error;
+
+            console.error = function (value) {
+
+                expect(value).to.equal('Invalid JSON config file: ' + config);
             };
 
-            Fs.writeFileSync(config, JSON.stringify(configObj));
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            broadcast.stderr.on('data', function (data) {
+            var json = JSON.stringify(configObj);
+            json = json.substring(0, json.length -3);
 
-                expect(data.toString()).to.not.exist;
-            });
+            Fs.writeFileSync(config, json);
 
-            broadcast.once('close', function(code) {
+            expect(function() {
+
+                Broadcast.run(['-c', config]);
+            }).to.throw('Unexpected end of input');
+
+            Fs.unlinkSync(config);
+            console.error = log;
+            done();
+        });
+
+        it('prints the arguments with -h', function (done) {
+
+            var exit = process.exit;
+            var log = console.error;
+
+            process.exit = function (code) {
 
                 expect(code).to.equal(0);
-                internals.cleanFiles(config, done);
-            });
+                process.exit = exit;
+                console.error = log;
+                done();
+            };
+            console.error = function (value) {
+
+                expect(value).to.contain('good-broadcast [options]');
+            };
+
+            Broadcast.run(['-h']);
+
+        });
+
+        it('display validation errors running from the command line', function (done) {
+            var log = console.error;
+            var exit = process.exit;
+            var output = '';
+
+            console.error = function (value) {
+
+                output += value;
+            };
+
+            process.exit = function (code) {
+
+                expect(code).to.equal(1);
+                expect(output).to.contain('interval must be larger than or equal to 1000');
+                console.log = log;
+                process.exit = exit;
+                done();
+            };
+
+            Broadcast.run(['-u', 'http://127.0.0.1:31338', '-i', '10']);
+        });
+
+        it('throws an error for invalid arguments as an option argument', function (done) {
+
+            expect(function() {
+
+                Broadcast.run({});
+            }).to.throw(Error);
+            done();
         });
     });
 
-    it('handles a log file that has the wrong format', function (done) {
+    describe('broadcast', function() {
 
-        var log = internals.uniqueFilename(internals.tempLogFolder);
-        var broadcast = null;
-        var runCount = 0;
-        var nextData = '{"event":"request","timestamp"' + ':1469328953222,"id":"1469328953222-42369-62002","instance":"http://localhost:8080","labels":["api","http"],"method":"get","path":"/test2","query":{},"source":' + '{"remoteAddress":"127.0.0.1"},"responseTime":19,"statusCode":200}';
-        var server = internals.createServer(function (request, reply) {
+        it('sends a message to the supplied url', function (done) {
 
-            expect(request.payload.schema).to.equal('good.v1');
+            var server = TestHelpers.createTestServer(function (request, reply) {
 
-            if (runCount++ === 0) {
-                expect(request.payload.events[0].id).to.equal('1469328953222-42369-62002');
-            }
-            broadcast.kill('SIGUSR2');
-        });
-
-        server.start(function () {
-
-            var url = server.info.uri;
-
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
-            broadcast.stderr.on('data', function (data) {
-
-                expect(data.toString()).to.exist;
-                broadcast.kill('SIGUSR2');
-            });
-
-            broadcast.once('close', function(code) {
-
-                expect(code).to.equal(0);
-                internals.cleanFiles(log, done);
-            });
-        });
-
-        var stream = Fs.createWriteStream(log, { flags: 'a' });
-        stream.write(internals.inlineLogEntry.lineOne.toString());
-        stream.write(internals.inlineLogEntry.lineTwo.toString());
-
-        setTimeout(function () {
-
-            stream.write(nextData);
-        }, 300);
-    });
-
-    it('handles connection errors to remote server', function (done) {
-
-        var log = internals.uniqueFilename(internals.tempLogFolder);
-        var broadcast = null;
-        var runCount = 0;
-        var stream = Fs.createWriteStream(log, { flags: 'a' });
-        stream.write(internals.inlineLogEntry.lineTwo.toString());
-        var server = internals.createServer(function (request, reply) {
-
-            expect(request.payload.schema).to.equal('good.v1');
-            if (runCount++ === 0) {
-
-                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineTwo.id);
-                server.stop();
-            }
-        });
-
-        server.start(function () {
-
-            var url = server.info.uri;
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url]);
-            broadcast.stderr.on('data', function (data) {
-
-                expect(data.toString()).to.contain('ECONNREFUSED');
-                broadcast.kill('SIGUSR2');
-            });
-
-            broadcast.once('close', function(code) {
-
-                expect(code).to.equal(0);
-                internals.cleanFiles(log, done);
-            });
-
-            setTimeout(function () {
-
-                stream.write(internals.inlineLogEntry.lineThree.toString());
-            }, 300);
-        });
-    });
-
-    it('sends ops log file to remote server', function (done) {
-
-        var broadcast = null;
-        var server = internals.createServer(function (request, reply) {
-
-            expect(request.payload.schema).to.equal('good.v1');
-            expect(request.payload.events[0].timestamp).to.equal(1375466329196);
-            broadcast.kill('SIGUSR2');
-        });
-
-        server.start(function () {
-
-            var url = server.info.uri;
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', './test/fixtures/test_ops.log', '-u', url]);
-            broadcast.stderr.on('data', function (data) {
-
-                expect(data.toString()).to.not.exist;
-            });
-
-            broadcast.once('close', function (code) {
-
-                expect(code).to.equal(0);
+                expect(request.payload.events).to.equal('test event');
+                reply(200);
                 done();
             });
-        });
-    });
 
-    it('handles a log file that exists when onlySendNew is enabled', function (done) {
+            var log = console.log;
 
-        var log = internals.uniqueFilename(internals.tempLogFolder);
-        var broadcast = null;
+            console.log = function (value) {
 
-        var stream = Fs.createWriteStream(log, { flags: 'a' });
-        stream.write(internals.inlineLogEntry.lineOne.toString());
-        stream.write(internals.inlineLogEntry.lineTwo.toString());
+                expect(value).to.equal(200);
+                console.log = log;
+                done();
+            };
 
-        var server = internals.createServer(function (request, reply) {
+            server.start(function () {
 
-            expect(request.payload.schema).to.equal('good.v1');
-            expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineThree.id);
-            broadcast.kill('SIGUSR2');
-        });
-
-        server.start(function () {
-
-            var url = server.info.uri;
-            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-n']);
-            broadcast.stderr.on('data', function (data) {
-
-                expect(data.toString()).to.not.exist;
+                Broadcast.broadcast('test event', server.info.uri);
             });
 
-            broadcast.once('close', function(code) {
-
-                expect(code).to.equal(0);
-                internals.cleanFiles(log, done);
-            });
-
-            setTimeout(function () {
-
-                stream.write(internals.inlineLogEntry.lineThree.toString());
-            }, 300);
         });
+
+        it('does not send empty log messages', function (done) {
+
+            var log = console.error;
+
+            console.error = function (value) {
+
+                expect(value).to.not.exist;
+            };
+
+            var result = Broadcast.broadcast('', 'http://localhost:127.0.0.1:1');
+
+            expect(result).to.not.exist;
+            console.error = log;
+            done();
+        });
+
+        it('logs an error if there is a problem with Wreck', function (done) {
+
+            var log = console.error;
+
+            console.error = function (value) {
+
+                expect(value).to.exist;
+                expect(value.output.statusCode).to.equal(502);
+
+                console.error = log;
+                done();
+            };
+
+            Broadcast.broadcast('test message', 'http://localhost:127.0.0.1:1');
+
+        });
+
     });
 
-    it('honors -p (use last index) option', function (done) {
+    describe('last index', function () {
 
-        var log = internals.uniqueFilename(internals.tempLogFolder);
-        var stream = Fs.createWriteStream(log, { flags: 'a' });
-        var broadcast1 = null;
-        var broadcast2 = null;
-        var hitCount = 0;
-        var server = internals.createServer(function(request, reply) {
+        it('honors the -p argument', function (done) {
 
-            hitCount++;
-            expect(request.payload.schema).to.equal('good.v1');
-
-            if (hitCount === 1) {
-                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineOne.id);
-
-                broadcast1.kill('SIGUSR2');
-                stream.write('\n' + internals.inlineLogEntry.lineThree.toString());
-                stream.write('\n' + internals.inlineLogEntry.lineTwo.toString());
-
-            }
-            else {
+            var server = TestHelpers.createTestServer(function (request, reply) {
                 expect(request.payload.events.length).to.equal(2);
-                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineThree.id);
-                expect(request.payload.events[1].id).to.equal(internals.inlineLogEntry.lineTwo.id);
+            });
+            var lastIndex = TestHelpers.uniqueFilename();
 
-                broadcast2.kill('SIGUSR2');
-            }
+            server.start(function () {
+                var original = Utils.recursiveAsync;
 
+                Utils.recursiveAsync = function (init, iterator, callback) {
+
+                    expect(init.start).to.equal(0);
+                    expect(init.result.stats).to.exist;
+                    expect(init.previous.stats).to.exist;
+
+                    iterator(init, function (value, next) {
+
+                        var file = Fs.readFileSync(lastIndex, {
+                            encoding: 'utf8'
+                        });
+                        expect(file).to.equal('503');
+                        Utils.recursiveAsync = original;
+                        done();
+                    });
+                };
+
+                Broadcast.run({
+                    path: './test/fixtures/test_01.log',
+                    url: server.info.uri,
+                    useLastIndex: true,
+                    lastIndexPath: lastIndex
+                });
+            });
         });
 
-        stream.write(internals.inlineLogEntry.lineOne.toString());
+        it('logs an error trying to create the index file', function (done) {
 
-        server.start(function () {
+            var open = Fs.open;
+            var log = console.error;
+            var file = TestHelpers.uniqueFilename();
 
-            var url = server.info.uri;
-            broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-p']);
+            Fs.open = function (path, flags, callback) {
 
-            broadcast1.stderr.on('data', function (data) {
+                var end = internals.getFrames('.logLastIndex');
 
-                expect(data.toString()).to.not.exist;
+                if  (end.length) {
+                    Fs.open = open;
+                    callback(new Error('mock error'), undefined);
+                }
+                else {
+                    open.apply(null, arguments);
+                }
+            };
+
+            console.error = function (value) {
+
+                expect(value.message).to.equal('mock error');
+                console.error = log;
+
+                done();
+            };
+
+            Broadcast.run({
+                path: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:1',
+                useLastIndex: true,
+                lastIndexPath: file
             });
 
-            broadcast1.once('close', function (code) {
+        });
+    });
 
-                expect(code).to.equal(0);
+    describe('recursive logic', function () {
 
-                broadcast2 = ChildProcess.spawn(process.execPath, [broadcastPath, '-l', log, '-u', url, '-p']);
+        it('logs an error if there is an async error', function (done) {
 
-                broadcast2.stderr.on('data', function (data) {
+            var original = Utils.recursiveAsync;
+            var log = console.error;
+            var exit = process.exit;
+            var output = '';
 
-                    expect(data.toString()).to.not.exist;
+            console.error = function (error) {
+
+                output += error.message || error;
+            };
+
+            process.exit = function (code) {
+
+                expect(code).to.equal(1);
+                expect(output).to.contain('async error');
+
+                process.exit = exit;
+                Utils.recursiveAsync = original;
+                console.error = log;
+
+                done();
+            };
+
+            Utils.recursiveAsync = function (init, iterator, callback) {
+
+                iterator(init, function (value, error) {
+
+                    callback(new Error('async error'));
                 });
+            };
 
-                broadcast2.once('close', function(code) {
+            Broadcast.run({
+                path: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:9001'
+            });
+        });
 
-                    expect(code).to.equal(0);
-                    internals.cleanFiles(log, done);
-                });
+        it('cleans up when the final callback executes, even without an error', function (done) {
+
+            var original = Utils.recursiveAsync;
+            var exit = process.exit;
+
+            process.exit = function (code) {
+
+                expect(code).to.equal(1);
+                process.exit = exit;
+
+                Utils.recursiveAsync = original;
+                done();
+            };
+
+            Utils.recursiveAsync = function (init, iterator, callback) {
+
+                callback(null);
+            };
+
+            Broadcast.run({
+                path: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:1'
+            });
+        });
+
+        it('uses the newer file if the lengths are the same', function (done) {
+
+            var original = Utils.recursiveAsync;
+            var get = Log.get;
+
+
+            Utils.recursiveAsync = function (init, iterator, callback) {
+
+                init.start = 100;
+
+                // Make a close so we don't change previous at the same time.
+                init.result = Hoek.clone(init.result);
+                init.result.stats.mtime = new Date();
+
+                Log.get = function (logPath, start, callback) {
+
+                    // Start gets reset because the file has changed but the length is the same
+                    expect(logPath).to.equal('./test/fixtures/test_01.log');
+                    expect(start).to.equal(0);
+
+                    Log.get = get;
+                    Utils.recursiveAsync = original;
+                    done();
+                };
+
+                iterator(init, function () {});
+            };
+
+            Broadcast.run({
+                path: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:1'
             });
         });
     });
+
 });

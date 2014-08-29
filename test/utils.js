@@ -1,3 +1,5 @@
+// Load modules
+
 var Lab = require('lab');
 var Util = require('../lib/utils');
 
@@ -10,11 +12,15 @@ var after = lab.after;
 var describe = lab.describe;
 var it = lab.it;
 
+// Declare internals
+
+var internals = {};
+
 describe('Utils', function () {
 
     describe('forever', function(){
 
-        it('calls itself recursively asynchonously', function (done) {
+        it('calls itself recursively asynchronously', function (done) {
 
             var count = 0;
             Util.recursiveAsync(0, function (value, callback) {
