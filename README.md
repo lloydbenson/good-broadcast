@@ -24,6 +24,7 @@ A broadcast.json may look like:
     "path": "/fullpath/request_services.log",
     "interval": 1000,
     "useLastIndex": false,
+    "lastIndexPath": "/fullpath/temp/logindex.tmp"
     "onlySendNew": true,
     "resume": false
 }
@@ -33,7 +34,8 @@ A broadcast.json may look like:
 
 `good-broadcast` supports the following command line options
 - `-u`,`--url` - full URL to the external server to transmit good logs.
-- `l`, `--path` - location of a [good](https://github.com/hapijs/good) log file.
-- `i`, `--interval` - sampling frequency of the log file.
-- `n`, `--onlySendNew` - sets the "start reading" index to the end of the file when the command is started. Then only new events will be transmitted.
-- `r`, `--resume` - during log file processing a ".lastindex" file is created to keep track of the previous transmission. If the process is restarted, transmission will resume from the location indicated in the ".lastIndex" file. `-r` trumps `-n` and should not be used together.
+- `-l`, `--path` - location of a [good](https://github.com/hapijs/good) log file.
+- `-i`, `--interval` - sampling frequency of the log file.
+- `-n`, `--onlySendNew` - sets the "start reading" index to the end of the file when the command is started. Then only new events will be transmitted.
+- `-p`, `--useLastIndex` - during log file processing a ".lastindex" file is created to keep track of the previous transmission. If the process is restarted, transmission will resume from the location indicated in the ".lastIndex" file. `-p` trumps `-n` and should not be used together.
+- `-l`, `--lastIndexPath` - specify a custom file for the `-p` option. Implies `-p`. **WARNING** any file currently at that location will be truncated.
