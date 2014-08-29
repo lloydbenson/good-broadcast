@@ -39,3 +39,6 @@ A broadcast.json may look like:
 - `-n`, `--onlySendNew` - sets the "start reading" index to the end of the file when the command is started. Then only new events will be transmitted.
 - `-p`, `--useLastIndex` - during log file processing a ".lastindex" file is created to keep track of the previous transmission. If the process is restarted, transmission will resume from the location indicated in the ".lastIndex" file. `-p` trumps `-n` and should not be used together.
 - `-l`, `--lastIndexPath` - specify a custom file for the `-p` option. Implies `-p`. **WARNING** any file currently at that location will be truncated.
+
+### Killing Process
+Sending issuing `kill -SIGUSR2 PID`, where PID is the running broadcast script. You can get the PID with the following linux command `ps auxww | grep node`.
