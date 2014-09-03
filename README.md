@@ -10,8 +10,6 @@ Lead Maintainer: [Lloyd Benson](https://github.com/lloydbenson)
 
 `broadcast -c broadcast.json`
 
-`broadcast` can be pass either a configuration file or traditional command line arguments. A configuration file will trump any command line arguments.
-
 ### Config File
 
 A broadcast.json may look like:
@@ -19,24 +17,20 @@ A broadcast.json may look like:
 ```json
 {
     "url": "http://analytics.mysite.com",
-    "path": "/fullpath/request_services.log",
     "interval": 1000,
-    "useLastIndex": false,
-    "lastIndexPath": "/fullpath/temp/logindex.tmp"
-    "onlySendNew": true,
-    "resume": false
+    "log": "/fullpath/request_services.log",
+    "newOnly": true,
+    "resumePath": "/fullpath/temp/logindex.tmp"
 }
 ```
 
-### Command Line
+### Configuration Object
 
-`good-broadcast` supports the following command line options
-- `-u`,`--url` - full URL to the external server to transmit good logs.
-- `-l`, `--path` - location of a [good](https://github.com/hapijs/good) log file.
-- `-i`, `--interval` - sampling frequency of the log file.
-- `-n`, `--onlySendNew` - sets the "start reading" index to the end of the file when the command is started. Then only new events will be transmitted.
-- `-p`, `--useLastIndex` - during log file processing a ".lastindex" file is created to keep track of the previous transmission. If the process is restarted, transmission will resume from the location indicated in the ".lastIndex" file. `-p` trumps `-n` and should not be used together.
-- `-l`, `--lastIndexPath` - specify a custom file for the `-p` option. Implies `-p`. **WARNING** any file currently at that location will be truncated.
+- `url` - (**required**) The complete URL to POST log information.
+- `interval` - The frequency to check the log file for changes. Defaults to `1000`.
+- `log` - (**required**) Path to the log file.
+- `newOnly` - Only send new log entries. Defaults to `false`.
+- `resumePath` - Maintain a file to keep track of previous reads and start from that index on restarts or failures.
 
 ### Killing Process
 Sending issuing `kill -SIGUSR2 PID`, where PID is the running broadcast script. You can get the PID with the following linux command `ps auxww | grep node`.

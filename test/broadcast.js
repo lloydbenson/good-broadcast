@@ -38,78 +38,8 @@ describe('Broadcast', function () {
 
     describe('options', function () {
 
-        it('accepts the command line style arguments', function (done) {
-
-            var server = TestHelpers.createTestServer(function (request, reply) {
-
-                expect(request.payload.schema).to.equal('good.v1');
-                expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
-            });
-
-            server.start(function () {
-                var original = Utils.recursiveAsync;
-
-                Utils.recursiveAsync = function (init, iterator, error) {
-
-                    expect(init.start).to.equal(0);
-                    expect(init.result.stats).to.exist;
-                    expect(init.previous.stats).to.exist;
-
-                    iterator(init, function (error, value) {
-
-                        expect(error).to.not.exist;
-                        expect(value.start).to.equal(503);
-                        expect(init.result.stats).to.exist;
-                        expect(init.previous.stats).to.exist;
-
-                        Utils.recursiveAsync = original;
-                        done();
-                    });
-                };
-
-                Broadcast.run(['-l','./test/fixtures/test_01.log','-u', server.info.uri]);
-            });
-        });
-
-        it('accepts an argument object', function (done) {
-
-            var server = TestHelpers.createTestServer(function (request, reply) {
-
-                expect(request.payload.schema).to.equal('good.v1');
-                expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
-            });
-
-            server.start(function () {
-
-                var original = Utils.recursiveAsync;
-
-                Utils.recursiveAsync = function (init, iterator, callback) {
-
-                    expect(init.start).to.equal(0);
-                    expect(init.result.stats).to.exist;
-                    expect(init.previous.stats).to.exist;
-
-                    iterator(init, function (error, value) {
-
-                        expect(error).to.not.exist;
-                        expect(value.start).to.equal(503);
-                        expect(init.result.stats).to.exist;
-                        expect(init.previous.stats).to.exist;
-
-                        Utils.recursiveAsync = original;
-                        done();
-                    });
-                };
-
-                Broadcast.run({
-                    path: './test/fixtures/test_01.log',
-                    url: server.info.uri
-                });
-            });
-        });
-
         it('accepts a configuration object (-c)', function (done) {
-            var config = TestHelpers.uniqueFilename();
+
             var server = TestHelpers.createTestServer(function (request, reply) {
 
                 expect(request.payload.schema).to.equal('good.v1');
@@ -119,6 +49,10 @@ describe('Broadcast', function () {
             server.start(function () {
 
                 var original = Utils.recursiveAsync;
+                var config = TestHelpers.writeConfig({
+                    url: server.info.uri,
+                    log: './test/fixtures/test_01.log'
+                });
 
                 Utils.recursiveAsync = function (init, iterator, error) {
 
@@ -139,29 +73,31 @@ describe('Broadcast', function () {
                     });
                 };
 
-                var configObj = {
-                    url: server.info.uri,
-                    path: './test/fixtures/test_01.log'
-                };
-
-                Fs.writeFileSync(config, JSON.stringify(configObj));
-
                 Broadcast.run(['-c', config]);
-
             });
         });
 
-        it('throws an error for an invalid configuration object (-c)', function (done) {
+        it('exits for an invalid configuration object (-c)', function (done) {
             var config = TestHelpers.uniqueFilename();
             var configObj = {
                 url: 'http://127.0.0.1:31337',
-                path: './test/fixtures/test_01.log'
+                log: './test/fixtures/test_01.log'
             };
             var log = console.error;
+            var exit = process.exit;
 
             console.error = function (value) {
 
                 expect(value).to.equal('Invalid JSON config file: ' + config);
+            };
+
+            process.exit = function (code) {
+
+                expect(code).to.equal(1);
+                process.exit = exit;
+                console.error = log;
+
+                done();
             };
 
             var json = JSON.stringify(configObj);
@@ -169,40 +105,17 @@ describe('Broadcast', function () {
 
             Fs.writeFileSync(config, json);
 
-            expect(function() {
-
-                Broadcast.run(['-c', config]);
-            }).to.throw('Unexpected end of input');
-
-            Fs.unlinkSync(config);
-            console.error = log;
-            done();
-        });
-
-        it('prints the arguments with -h', function (done) {
-
-            var exit = process.exit;
-            var log = console.error;
-
-            process.exit = function (code) {
-
-                expect(code).to.equal(0);
-                process.exit = exit;
-                console.error = log;
-                done();
-            };
-            console.error = function (value) {
-
-                expect(value).to.contain('good-broadcast [options]');
-            };
-
-            Broadcast.run(['-h']);
-
+            Broadcast.run(['-c', config]);
         });
 
         it('display validation errors running from the command line', function (done) {
+
             var log = console.error;
             var exit = process.exit;
+            var config = TestHelpers.writeConfig({
+                url: 'http://127.0.0.1:31338',
+                interval: 10
+            });
             var output = '';
 
             console.error = function (value) {
@@ -219,17 +132,30 @@ describe('Broadcast', function () {
                 done();
             };
 
-            Broadcast.run(['-u', 'http://127.0.0.1:31338', '-i', '10']);
+            Broadcast.run(['--config', config]);
         });
 
-        it('throws an error for invalid arguments as an option argument', function (done) {
+        it('exits for invalid arguments as an option argument', function (done) {
 
-            expect(function() {
+            var log = console.error;
+            var exit = process.exit;
 
-                Broadcast.run({});
-            }).to.throw(Error);
-            done();
+            console.error = function(value) {
+
+                console.error = log;
+                expect(value).to.equal('-c or --config option must be present and be a valid file path');
+            };
+
+            process.exit = function(code) {
+
+                process.exit = exit;
+                expect(code).to.equal(1);
+                done();
+            };
+
+            Broadcast.run(['-t', 1]);
         });
+
     });
 
     describe('broadcast', function() {
@@ -240,15 +166,15 @@ describe('Broadcast', function () {
 
                 expect(request.payload.events).to.equal('test event');
                 reply(200);
-                done();
             });
 
-            var log = console.log;
+            var write = process.stdout.write;
 
-            console.log = function (value) {
+            process.stdout.write = function (chunk, encoding, cb) {
 
-                expect(value).to.equal(200);
-                console.log = log;
+                process.stdout.write = write;
+                var result = ~~(chunk.toString());
+                expect(result).to.equal(200);
                 done();
             };
 
@@ -292,19 +218,26 @@ describe('Broadcast', function () {
 
         });
 
+
     });
 
     describe('last index', function () {
 
-        it('honors the -p argument', function (done) {
+        it('honors the resumePath argument', function (done) {
 
             var server = TestHelpers.createTestServer(function (request, reply) {
+
                 expect(request.payload.events.length).to.equal(2);
             });
-            var lastIndex = TestHelpers.uniqueFilename();
+            var resume = TestHelpers.uniqueFilename();
 
             server.start(function () {
                 var original = Utils.recursiveAsync;
+                var config = TestHelpers.writeConfig({
+                    url: server.info.uri,
+                    log: './test/fixtures/test_01.log',
+                    resumePath: resume
+                });
 
                 Utils.recursiveAsync = function (init, iterator, callback) {
 
@@ -314,21 +247,17 @@ describe('Broadcast', function () {
 
                     iterator(init, function (value, next) {
 
-                        var file = Fs.readFileSync(lastIndex, {
+                        var file = Fs.readFileSync(resume, {
                             encoding: 'utf8'
                         });
                         expect(file).to.equal('503');
                         Utils.recursiveAsync = original;
+                        //Fs.unlinkSync('./test/fixtures/.lastindex');
                         done();
                     });
                 };
 
-                Broadcast.run({
-                    path: './test/fixtures/test_01.log',
-                    url: server.info.uri,
-                    useLastIndex: true,
-                    lastIndexPath: lastIndex
-                });
+                Broadcast.run(['-c', config]);
             });
         });
 
@@ -337,6 +266,11 @@ describe('Broadcast', function () {
             var open = Fs.open;
             var log = console.error;
             var file = TestHelpers.uniqueFilename();
+            var config = TestHelpers.writeConfig({
+                log: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:1',
+                resumePath: file
+            });
 
             Fs.open = function (path, flags, callback) {
 
@@ -359,13 +293,7 @@ describe('Broadcast', function () {
                 done();
             };
 
-            Broadcast.run({
-                path: './test/fixtures/test_01.log',
-                url: 'http://127.0.0.1:1',
-                useLastIndex: true,
-                lastIndexPath: file
-            });
-
+            Broadcast.run(['-c', config]);
         });
     });
 
@@ -377,6 +305,10 @@ describe('Broadcast', function () {
             var log = console.error;
             var exit = process.exit;
             var output = '';
+            var config = TestHelpers.writeConfig({
+                log: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:9001'
+            });
 
             console.error = function (error) {
 
@@ -403,16 +335,17 @@ describe('Broadcast', function () {
                 });
             };
 
-            Broadcast.run({
-                path: './test/fixtures/test_01.log',
-                url: 'http://127.0.0.1:9001'
-            });
+            Broadcast.run(['-c', config]);
         });
 
         it('cleans up when the final callback executes, even without an error', function (done) {
 
             var original = Utils.recursiveAsync;
             var exit = process.exit;
+            var config = TestHelpers.writeConfig({
+                log: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:1'
+            });
 
             process.exit = function (code) {
 
@@ -428,23 +361,24 @@ describe('Broadcast', function () {
                 callback(null);
             };
 
-            Broadcast.run({
-                path: './test/fixtures/test_01.log',
-                url: 'http://127.0.0.1:1'
-            });
+            Broadcast.run(['-c', config]);
         });
 
         it('uses the newer file if the lengths are the same', function (done) {
 
             var original = Utils.recursiveAsync;
             var get = Log.get;
+            var config = TestHelpers.writeConfig({
+                log: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:1'
+            });
 
 
             Utils.recursiveAsync = function (init, iterator, callback) {
 
                 init.start = 100;
 
-                // Make a close so we don't change previous at the same time.
+                // Make a clone so we don't change previous at the same time.
                 init.result = Hoek.clone(init.result);
                 init.result.stats.mtime = new Date();
 
@@ -462,10 +396,7 @@ describe('Broadcast', function () {
                 iterator(init, function () {});
             };
 
-            Broadcast.run({
-                path: './test/fixtures/test_01.log',
-                url: 'http://127.0.0.1:1'
-            });
+            Broadcast.run(['-c', config]);
         });
     });
 

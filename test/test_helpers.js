@@ -3,6 +3,7 @@
 var Hapi = require('hapi');
 var Path = require('path');
 var Crypto = require('crypto');
+var Fs = require('fs');
 
 //Declare internals
 
@@ -37,4 +38,12 @@ exports.uniqueFilename = function () {
 
     var name = [Date.now(), process.pid, Crypto.randomBytes(8).toString('hex')].join('-') + '.__test';
     return Path.join(internals.tempFolder, name);
+};
+
+exports.writeConfig = function (options) {
+
+    var config = exports.uniqueFilename();
+    Fs.writeFileSync(config, JSON.stringify(options));
+
+    return config;
 };
