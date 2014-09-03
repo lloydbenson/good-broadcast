@@ -20,7 +20,6 @@ A broadcast.json may look like:
     "interval": 1000,
     "log": "/fullpath/request_services.log",
     "newOnly": true,
-    "resume": false,
     "resumePath": "/fullpath/temp/logindex.tmp"
 }
 ```
@@ -31,8 +30,7 @@ A broadcast.json may look like:
 - `interval` - The frequency to check the log file for changes. Defaults to `1000`.
 - `log` - (**required**) Path to the log file.
 - `newOnly` - Only send new log entries. Defaults to `false`.
-- `resume` - Maintain a hidden file to keep track of previous reads. If `resumePath` isn't specified, a ".lastindex" file will be created next to `log`.
-- `resumePath` - Path to keep track of the `resume` index. Implies `resume`. 
+- `resumePath` - Maintain a file to keep track of previous reads and start from that index on restarts or failures.
 
 ### Killing Process
 Sending issuing `kill -SIGUSR2 PID`, where PID is the running broadcast script. You can get the PID with the following linux command `ps auxww | grep node`.

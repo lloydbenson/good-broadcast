@@ -447,7 +447,7 @@ describe('Broadcast', function () {
         });
     });
 
-    it('honors resume option', function (done) {
+    it('honors resumePath option', function (done) {
 
         var log = TestHelpers.uniqueFilename();
         var lastIndex = TestHelpers.uniqueFilename();
@@ -487,7 +487,6 @@ describe('Broadcast', function () {
             var config = TestHelpers.writeConfig({
                 log: log,
                 url: url,
-                resume: true,
                 resumePath: lastIndex
             });
 

@@ -137,11 +137,23 @@ describe('Broadcast', function () {
 
         it('exits for invalid arguments as an option argument', function (done) {
 
-            expect(function() {
+            var log = console.error;
+            var exit = process.exit;
 
-                Broadcast.run(['-c', 1]);
-            }).to.throw(Error);
-            done();
+            console.error = function(value) {
+
+                console.error = log;
+                expect(value).to.equal('-c or --config option must be present and be a valid file path');
+            };
+
+            process.exit = function(code) {
+
+                process.exit = exit;
+                expect(code).to.equal(1);
+                done();
+            };
+
+            Broadcast.run(['-t', 1]);
         });
 
     });
@@ -211,19 +223,20 @@ describe('Broadcast', function () {
 
     describe('last index', function () {
 
-        it('honors the resume argument and creates a default .lastindex file', function (done) {
+        it('honors the resumePath argument', function (done) {
 
             var server = TestHelpers.createTestServer(function (request, reply) {
 
                 expect(request.payload.events.length).to.equal(2);
             });
+            var resume = TestHelpers.uniqueFilename();
 
             server.start(function () {
                 var original = Utils.recursiveAsync;
                 var config = TestHelpers.writeConfig({
                     url: server.info.uri,
                     log: './test/fixtures/test_01.log',
-                    resume: true
+                    resumePath: resume
                 });
 
                 Utils.recursiveAsync = function (init, iterator, callback) {
@@ -234,12 +247,12 @@ describe('Broadcast', function () {
 
                     iterator(init, function (value, next) {
 
-                        var file = Fs.readFileSync('./test/fixtures/.lastindex', {
+                        var file = Fs.readFileSync(resume, {
                             encoding: 'utf8'
                         });
                         expect(file).to.equal('503');
                         Utils.recursiveAsync = original;
-                        Fs.unlinkSync('./test/fixtures/.lastindex');
+                        //Fs.unlinkSync('./test/fixtures/.lastindex');
                         done();
                     });
                 };
