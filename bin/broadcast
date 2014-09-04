@@ -1,3 +1,8 @@
 #!/usr/bin/env node
 
 require('../lib/cli').run(process.argv);
+
+process.once('SIGUSR2', function () {
+
+    return process.exit(0);
+});

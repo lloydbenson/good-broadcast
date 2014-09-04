@@ -11,65 +11,7 @@ require('./cleanup');
 
 // Declare internals
 
-var internals = {
-    tempLogFolder: Path.join(__dirname, '_temp'),
-    inlineLogEntry: {
-        lineOne:{
-            event: 'request',
-            id: '1369328752975-42369-3828',
-            instance: 'http://localhost:8080',
-            labels: ['api','hapi'],
-            method: 'get',
-            path: '/test',
-            query: {},
-            responseTime: 71,
-            source: {
-                remoteAddress: '127.0.0.1'
-            },
-            statusCode: 200,
-            timestamp: 1369328752975,
-            toString: function() {
-                return JSON.stringify(this);
-            }
-        },
-        lineTwo:{
-            event: 'request',
-            id: '1369328753222-42369-62002',
-            instance: 'http://localhost:8080',
-            labels: ['api', 'hapi'],
-            method: 'get',
-            path: '/test',
-            query: {},
-            responseTime: 9,
-            source: {
-                remoteAddress: '127.0.0.1'
-            },
-            statusCode: 200,
-            timestamp: 1369328753222,
-            toString: function() {
-                return JSON.stringify(this);
-            }
-        },
-        lineThree: {
-            event: 'request',
-            id: '1469328953222-42369-1',
-            instance: 'http://localhost:8080',
-            labels: ['api', 'http'],
-            method: 'get',
-            path: '/test2',
-            query: {},
-            responseTime: 19,
-            source: {
-                remoteAddress: '127.0.0.1'
-            },
-            statusCode: 200,
-            timestamp: 1469328953222,
-            toString: function() {
-                return JSON.stringify(this);
-            }
-        }
-    }
-};
+var internals = {};
 
 
 // Test shortcuts
@@ -125,11 +67,11 @@ describe('Broadcast', function () {
             expect(request.payload.schema).to.equal('good.v1');
             if (runCount++ === 0) {
 
-                expect(id).to.equal(internals.inlineLogEntry.lineTwo.id);
+                expect(id).to.equal(TestHelpers.inlineLogEntry.lineTwo.id);
             }
             else {
 
-                expect(id).to.equal(internals.inlineLogEntry.lineThree.id);
+                expect(id).to.equal(TestHelpers.inlineLogEntry.lineThree.id);
                 broadcast.kill('SIGUSR2');
             }
         });
@@ -144,7 +86,7 @@ describe('Broadcast', function () {
                 url: url
             });
 
-            stream.write(internals.inlineLogEntry.lineTwo.toString());
+            stream.write(TestHelpers.inlineLogEntry.lineTwo.toString());
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
             broadcast.stderr.on('data', function (data) {
 
@@ -159,7 +101,7 @@ describe('Broadcast', function () {
 
             setTimeout(function () {
 
-                stream.write(internals.inlineLogEntry.lineThree.toString());
+                stream.write(TestHelpers.inlineLogEntry.lineThree.toString());
                 stream.end();
             }, 300);
         });
@@ -177,7 +119,7 @@ describe('Broadcast', function () {
             expect(request.payload.schema).to.equal('good.v1');
             if (runCount++ === 0) {
 
-                expect(id).to.equal(internals.inlineLogEntry.lineTwo.id);
+                expect(id).to.equal(TestHelpers.inlineLogEntry.lineTwo.id);
 
                 Fs.stat(log, function (err, stat) {
 
@@ -185,13 +127,13 @@ describe('Broadcast', function () {
                     Fs.truncate(log, stat.size, function (err) {
 
                         expect(err).to.not.exist;
-                        Fs.writeFileSync(log, internals.inlineLogEntry.lineThree.toString());
+                        Fs.writeFileSync(log, TestHelpers.inlineLogEntry.lineThree.toString());
                     });
                 });
             }
             else {
 
-                expect(id).to.equal(internals.inlineLogEntry.lineThree.id);
+                expect(id).to.equal(TestHelpers.inlineLogEntry.lineThree.id);
                 broadcast.kill('SIGUSR2');
             }
         });
@@ -204,7 +146,7 @@ describe('Broadcast', function () {
                 url: url
             });
 
-            Fs.writeFileSync(log, internals.inlineLogEntry.lineTwo.toString());
+            Fs.writeFileSync(log, TestHelpers.inlineLogEntry.lineTwo.toString());
 
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
             broadcast.stderr.on('data', function (data) {
@@ -231,7 +173,7 @@ describe('Broadcast', function () {
             expect(request.payload.schema).to.equal('good.v1');
             if (runCount++ === 0) {
 
-                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineTwo.id);
+                expect(request.payload.events[0].id).to.equal(TestHelpers.inlineLogEntry.lineTwo.id);
                 broadcast1 && broadcast1.kill('SIGUSR2');
             }
             else {
@@ -245,7 +187,7 @@ describe('Broadcast', function () {
 
             var url = server.info.uri;
             var stream = Fs.createWriteStream(log, { flags: 'a' });
-            stream.write(internals.inlineLogEntry.lineTwo.toString());
+            stream.write(TestHelpers.inlineLogEntry.lineTwo.toString());
 
             var config = TestHelpers.writeConfig({
                 log: log,
@@ -273,7 +215,7 @@ describe('Broadcast', function () {
                     done();
                 });
 
-                stream.write('\n' + internals.inlineLogEntry.lineThree.toString());
+                stream.write('\n' + TestHelpers.inlineLogEntry.lineThree.toString());
             });
         });
     });
@@ -317,8 +259,8 @@ describe('Broadcast', function () {
         });
 
         var stream = Fs.createWriteStream(log, { flags: 'a' });
-        stream.write(internals.inlineLogEntry.lineOne.toString());
-        stream.write(internals.inlineLogEntry.lineTwo.toString());
+        stream.write(TestHelpers.inlineLogEntry.lineOne.toString());
+        stream.write(TestHelpers.inlineLogEntry.lineTwo.toString());
 
         setTimeout(function () {
 
@@ -332,13 +274,13 @@ describe('Broadcast', function () {
         var broadcast = null;
         var runCount = 0;
         var stream = Fs.createWriteStream(log, { flags: 'a' });
-        stream.write(internals.inlineLogEntry.lineTwo.toString());
+        stream.write(TestHelpers.inlineLogEntry.lineTwo.toString());
         var server = TestHelpers.createTestServer(function (request, reply) {
 
             expect(request.payload.schema).to.equal('good.v1');
             if (runCount++ === 0) {
 
-                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineTwo.id);
+                expect(request.payload.events[0].id).to.equal(TestHelpers.inlineLogEntry.lineTwo.id);
                 server.stop();
             }
         });
@@ -366,7 +308,7 @@ describe('Broadcast', function () {
 
             setTimeout(function () {
 
-                stream.write(internals.inlineLogEntry.lineThree.toString());
+                stream.write(TestHelpers.inlineLogEntry.lineThree.toString());
             }, 300);
         });
     });
@@ -409,13 +351,13 @@ describe('Broadcast', function () {
         var broadcast = null;
 
         var stream = Fs.createWriteStream(log, { flags: 'a' });
-        stream.write(internals.inlineLogEntry.lineOne.toString());
-        stream.write(internals.inlineLogEntry.lineTwo.toString());
+        stream.write(TestHelpers.inlineLogEntry.lineOne.toString());
+        stream.write(TestHelpers.inlineLogEntry.lineTwo.toString());
 
         var server = TestHelpers.createTestServer(function (request, reply) {
 
             expect(request.payload.schema).to.equal('good.v1');
-            expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineThree.id);
+            expect(request.payload.events[0].id).to.equal(TestHelpers.inlineLogEntry.lineThree.id);
             broadcast.kill('SIGUSR2');
         });
 
@@ -442,7 +384,7 @@ describe('Broadcast', function () {
 
             setTimeout(function () {
 
-                stream.write(internals.inlineLogEntry.lineThree.toString());
+                stream.write(TestHelpers.inlineLogEntry.lineThree.toString());
             }, 300);
         });
     });
@@ -462,24 +404,24 @@ describe('Broadcast', function () {
             expect(request.payload.schema).to.equal('good.v1');
 
             if (hitCount === 1) {
-                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineOne.id);
+                expect(request.payload.events[0].id).to.equal(TestHelpers.inlineLogEntry.lineOne.id);
 
                 broadcast1.kill('SIGUSR2');
-                stream.write('\n' + internals.inlineLogEntry.lineThree.toString());
-                stream.write('\n' + internals.inlineLogEntry.lineTwo.toString());
+                stream.write('\n' + TestHelpers.inlineLogEntry.lineThree.toString());
+                stream.write('\n' + TestHelpers.inlineLogEntry.lineTwo.toString());
 
             }
             else {
                 expect(request.payload.events.length).to.equal(2);
-                expect(request.payload.events[0].id).to.equal(internals.inlineLogEntry.lineThree.id);
-                expect(request.payload.events[1].id).to.equal(internals.inlineLogEntry.lineTwo.id);
+                expect(request.payload.events[0].id).to.equal(TestHelpers.inlineLogEntry.lineThree.id);
+                expect(request.payload.events[1].id).to.equal(TestHelpers.inlineLogEntry.lineTwo.id);
 
                 broadcast2.kill('SIGUSR2');
             }
 
         });
 
-        stream.write(internals.inlineLogEntry.lineOne.toString());
+        stream.write(TestHelpers.inlineLogEntry.lineOne.toString());
 
         server.start(function () {
 
