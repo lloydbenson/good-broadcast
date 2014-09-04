@@ -108,7 +108,7 @@ describe('Broadcast', function () {
             Broadcast.run(['-c', config]);
         });
 
-        it('display validation errors running from the command line', function (done) {
+        it('logs validation errors', function (done) {
 
             var log = console.error;
             var exit = process.exit;
@@ -217,13 +217,11 @@ describe('Broadcast', function () {
             Broadcast.broadcast('test message', 'http://localhost:127.0.0.1:1');
 
         });
-
-
     });
 
-    describe('last index', function () {
+    describe('resume', function () {
 
-        it('honors the resumePath argument', function (done) {
+        it('creates the file indicated by resumePath', function (done) {
 
             var server = TestHelpers.createTestServer(function (request, reply) {
 
@@ -252,7 +250,7 @@ describe('Broadcast', function () {
                         });
                         expect(file).to.equal('503');
                         Utils.recursiveAsync = original;
-                        //Fs.unlinkSync('./test/fixtures/.lastindex');
+
                         done();
                     });
                 };
@@ -295,6 +293,69 @@ describe('Broadcast', function () {
 
             Broadcast.run(['-c', config]);
         });
+
+        it('will start reading from 0 if there is a problem with the index file', function (done) {
+
+            var config = TestHelpers.writeConfig({
+                log: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:9001',
+                resumePath: '~'
+            });
+
+            var original = Utils.recursiveAsync;
+
+            Utils.recursiveAsync = function (init, iterator, callback) {
+
+                Utils.recursiveAsync = original;
+                expect(init.start).to.equal(0);
+
+                done();
+            };
+
+            Broadcast.run(['-c', config]);
+
+        });
+
+        it('starts reading from the last index file', function (done) {
+
+            var server = TestHelpers.createTestServer(function (request, reply) {
+
+                expect(request.payload.events.length).to.equal(1);
+            });
+            var resume = TestHelpers.uniqueFilename();
+            Fs.writeFileSync(resume, 252);
+
+            server.start(function () {
+
+                var original = Utils.recursiveAsync;
+                var config = TestHelpers.writeConfig({
+                    url: server.info.uri,
+                    log: './test/fixtures/test_01.log',
+                    resumePath: resume
+                });
+
+                Utils.recursiveAsync = function (init, iterator, callback) {
+
+                    expect(init.start).to.equal(252);
+                    expect(init.result.stats).to.exist;
+                    expect(init.previous.stats).to.exist;
+
+                    iterator(init, function (value, next) {
+
+                        var file = Fs.readFileSync(resume, {
+                            encoding: 'utf8'
+                        });
+                        expect(file).to.equal('503');
+                        Utils.recursiveAsync = original;
+
+                        done();
+                    });
+                };
+
+                Broadcast.run(['-c', config]);
+            });
+        });
+
     });
 
     describe('recursive logic', function () {
@@ -332,6 +393,43 @@ describe('Broadcast', function () {
                 iterator(init, function (value, error) {
 
                     callback(new Error('async error'));
+                });
+            };
+
+            Broadcast.run(['-c', config]);
+        });
+
+        it('logs an error if there is a I/O error', function (done) {
+
+            var original = Utils.recursiveAsync;
+            var log = console.error;
+            var stat = Fs.stat;
+
+            var config = TestHelpers.writeConfig({
+                log: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:9001'
+            });
+
+            Utils.recursiveAsync = function (init, iterator, callback) {
+
+                Fs.stat = function (path, callback) {
+
+                    Fs.stat = stat;
+                    callback('simulated Fs error');
+                };
+
+                console.error = function (error) {
+
+                    console.error = log;
+                    expect(error).to.equal('simulated Fs error');
+                };
+
+
+                iterator(init, function (error, value) {
+
+                    expect(error).to.equal(null);
+                    Utils.recursiveAsync = original;
+                    done();
                 });
             };
 
@@ -398,6 +496,104 @@ describe('Broadcast', function () {
 
             Broadcast.run(['-c', config]);
         });
+
+        it('starts from the beginning of log file if it has been truncated', function (done) {
+
+            var log = TestHelpers.uniqueFilename();
+            var runCount = 0;
+            var server = TestHelpers.createTestServer(function (request, reply) {
+
+                var id = Hoek.reach(request, 'payload.events.0.id');
+
+                expect(request.payload.schema).to.equal('good.v1');
+                if (runCount++ === 0) {
+
+                    expect(id).to.equal(TestHelpers.inlineLogEntry.lineTwo.id);
+
+                    Fs.stat(log, function (err, stat) {
+
+                        expect(err).to.not.exist;
+                        Fs.truncate(log, stat.size, function (err) {
+
+                            expect(err).to.not.exist;
+                            Fs.writeFileSync(log, TestHelpers.inlineLogEntry.lineThree.toString());
+                        });
+                    });
+                }
+                else {
+
+                    expect(id).to.equal(TestHelpers.inlineLogEntry.lineThree.id);
+                    done();
+                }
+            });
+
+            server.start(function () {
+
+                var url = server.info.uri;
+                var config = TestHelpers.writeConfig({
+                    log: log,
+                    url: url
+                });
+
+                Fs.writeFileSync(log, TestHelpers.inlineLogEntry.lineTwo.toString());
+
+                Broadcast.run(['-c', config]);
+
+            });
+
+        });
+
+        it('will start reading from the end of the log file if newOnly is true', function (done) {
+
+            var config = TestHelpers.writeConfig({
+                log: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:9001',
+                newOnly: true
+            });
+
+            var original = Utils.recursiveAsync;
+
+            Utils.recursiveAsync = function (init, iterator, callback) {
+
+                Utils.recursiveAsync = original;
+                expect(init.start).to.equal(502);
+
+                done();
+            };
+
+            Broadcast.run(['-c', config]);
+
+        });
     });
+
+
+    it('provides an empty stats object if the file can not be opened', function (done) {
+
+            var config = TestHelpers.writeConfig({
+                log: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:9001'
+            });
+
+            var original = Utils.recursiveAsync;
+            var stat = Fs.stat;
+
+            Fs.stat = function (path, callback) {
+
+                Fs.stat = stat;
+                callback(null, null);
+            };
+
+            Utils.recursiveAsync = function (init, iterator, callback) {
+
+                Utils.recursiveAsync = original;
+                expect(init.result.stats).to.deep.equal({});
+                expect(init.result.stats).to.deep.equal({});
+
+                done();
+            };
+
+            Broadcast.run(['-c', config]);
+
+        });
 
 });
