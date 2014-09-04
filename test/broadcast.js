@@ -326,6 +326,7 @@ describe('Broadcast', function () {
             Fs.writeFileSync(resume, 252);
 
             server.start(function () {
+
                 var original = Utils.recursiveAsync;
                 var config = TestHelpers.writeConfig({
                     url: server.info.uri,
