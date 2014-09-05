@@ -16,12 +16,12 @@
     "node": "0.10.x"
   },
   "bin": {
-    "good-broadcast": "./bin/good-broadcast"
+    "broadcast": "./bin/broadcast"
   },
   "dependencies": {
     "hoek": "2.x.x",
     "joi": "4.x.x",
-    "wreck": "3.x.x"
+    "wreck": "5.x.x"
   },
   "peerDependencies": {
     "hapi": ">=2.x.x"
