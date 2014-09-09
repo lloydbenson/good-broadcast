@@ -1,7 +1,7 @@
 {
   "name": "good-broadcast",
   "description": "broadcasting functions for good",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "repository": "git://github.com/hapijs/good-broadcast",
   "main": "index",
   "keywords": [
@@ -13,7 +13,7 @@
     "plugin"
   ],
   "engines": {
-    "node": "0.10.x"
+    "node": ">=0.10.x"
   },
   "bin": {
     "broadcast": "./bin/broadcast"
