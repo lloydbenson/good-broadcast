@@ -7,8 +7,6 @@ var Util = require('../lib/utils');
 
 var lab = exports.lab = Lab.script();
 var expect = Lab.expect;
-var before = lab.before;
-var after = lab.after;
 var describe = lab.describe;
 var it = lab.it;
 
@@ -18,7 +16,7 @@ var internals = {};
 
 describe('Utils', function () {
 
-    describe('forever', function(){
+    describe('forever()', function(){
 
         it('calls itself recursively asynchronously', function (done) {
 

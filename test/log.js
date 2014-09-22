@@ -10,8 +10,6 @@ require('./cleanup');
 
 var lab = exports.lab = Lab.script();
 var expect = Lab.expect;
-var before = lab.before;
-var after = lab.after;
 var describe = lab.describe;
 var it = lab.it;
 
@@ -21,7 +19,7 @@ var internals = {};
 
 describe('Log', function () {
 
-    describe('get', function () {
+    describe('get()', function () {
 
         it('reads a log file from the beginning', function (done) {
             
