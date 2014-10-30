@@ -20,17 +20,21 @@ A broadcast.json may look like:
     "interval": 1000,
     "log": "/fullpath/request_services.log",
     "newOnly": true,
-    "resumePath": "/fullpath/temp/logindex.tmp"
+    "resumePath": "/fullpath/temp/logindex.tmp",
+    "wait": 1000,
+    "retries": 1
 }
 ```
 
 ### Configuration Object
 
 - `url` - (**required**) The complete URL to POST log information.
-- `interval` - The frequency to check the log file for changes. Defaults to `1000`.
+- `interval` - The frequency to check the log file for changes. Defaults to 1000.
 - `log` - (**required**) Path to the log file.
 - `newOnly` - Only send new log entries. Defaults to `false`.
 - `resumePath` - Maintain a file to keep track of previous reads and start from that index on restarts or failures.
+- `wait` - Number of milliseconds to wait before trying a failed broadcast again. Defaults to 1000.
+- `retries` - Number of time to retry sending the same message. Defaults to 1.
 
 ### Killing Process
 Sending issuing `kill -SIGUSR2 PID`, where PID is the running broadcast script. You can get the PID with the following linux command `ps auxww | grep node`.

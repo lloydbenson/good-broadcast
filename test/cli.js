@@ -74,6 +74,7 @@ describe('Broadcast', function () {
                 expect(id).to.equal(TestHelpers.inlineLogEntry.lineThree.id);
                 broadcast.kill('SIGUSR2');
             }
+            reply().code(200);
         });
 
         server.start(function () {
@@ -136,6 +137,7 @@ describe('Broadcast', function () {
                 expect(id).to.equal(TestHelpers.inlineLogEntry.lineThree.id);
                 broadcast.kill('SIGUSR2');
             }
+            reply().code(200);
         });
 
         server.start(function () {
@@ -281,6 +283,7 @@ describe('Broadcast', function () {
             if (runCount++ === 0) {
 
                 expect(request.payload.events[0].id).to.equal(TestHelpers.inlineLogEntry.lineTwo.id);
+                reply().code(200);
                 server.stop();
             }
         });
@@ -294,7 +297,8 @@ describe('Broadcast', function () {
             });
 
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            broadcast.stderr.on('data', function (data) {
+            //broadcast = ChildProcess.spawn('node-debug', [broadcastPath, '-c', config]);
+            broadcast.stderr.once('data', function (data) {
 
                 expect(data.toString()).to.contain('ECONNREFUSED');
                 broadcast.kill('SIGUSR2');
@@ -402,13 +406,19 @@ describe('Broadcast', function () {
 
             hitCount++;
             expect(request.payload.schema).to.equal('good.v1');
+            reply().code(200);
 
             if (hitCount === 1) {
                 expect(request.payload.events[0].id).to.equal(TestHelpers.inlineLogEntry.lineOne.id);
 
-                broadcast1.kill('SIGUSR2');
                 stream.write('\n' + TestHelpers.inlineLogEntry.lineThree.toString());
                 stream.write('\n' + TestHelpers.inlineLogEntry.lineTwo.toString());
+
+                // Need to give the write last index enough time to write itself
+                setTimeout(function () {
+
+                    broadcast1.kill('SIGUSR2');
+                }, 100);
 
             }
             else {
@@ -418,7 +428,6 @@ describe('Broadcast', function () {
 
                 broadcast2.kill('SIGUSR2');
             }
-
         });
 
         stream.write(TestHelpers.inlineLogEntry.lineOne.toString());

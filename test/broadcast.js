@@ -42,6 +42,7 @@ describe('Broadcast', function () {
 
                 expect(request.payload.schema).to.equal('good.v1');
                 expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
+                reply().code(200);
             });
 
             server.start(function () {
@@ -173,30 +174,34 @@ describe('Broadcast', function () {
                 process.stdout.write = write;
                 var result = ~~(chunk.toString());
                 expect(result).to.equal(200);
-                done();
             };
 
             server.start(function () {
 
-                Broadcast.broadcast('test event', server.info.uri);
+                Broadcast.broadcast('test event', {
+                    url: server.info.uri,
+                    wait: 1000,
+                    retries: 1
+                }, function (err) {
+
+                    expect(err).to.not.exist;
+                    done();
+                });
             });
 
         });
 
         it('does not send empty log messages', function (done) {
 
-            var log = console.error;
+            Broadcast.broadcast('', {
+                url:'http://localhost:127.0.0.1:1',
+                retries: 1,
+                wait: 1000
+            }, function (err) {
 
-            console.error = function (value) {
-
-                expect(value).to.not.exist;
-            };
-
-            var result = Broadcast.broadcast('', 'http://localhost:127.0.0.1:1');
-
-            expect(result).to.not.exist;
-            console.error = log;
-            done();
+                expect(err).to.not.exist;
+                done();
+            });
         });
 
         it('logs an error if there is a problem with Wreck', function (done) {
@@ -205,15 +210,19 @@ describe('Broadcast', function () {
 
             console.error = function (value) {
 
+                console.error = log;
                 expect(value).to.exist;
                 expect(value.output.statusCode).to.equal(502);
-
-                console.error = log;
-                done();
             };
 
-            Broadcast.broadcast('test message', 'http://localhost:127.0.0.1:1');
+            Broadcast.broadcast('test message', {
+                url: 'http://localhost:127.0.0.1:1',
+                wait: 1000,
+                retries: 1
+            }, function () {
 
+                done();
+            });
         });
     });
 
@@ -224,6 +233,7 @@ describe('Broadcast', function () {
             var server = TestHelpers.createTestServer(function (request, reply) {
 
                 expect(request.payload.events.length).to.equal(2);
+                reply().code(200);
             });
             var resume = TestHelpers.uniqueFilename();
 
@@ -259,58 +269,72 @@ describe('Broadcast', function () {
 
         it('logs an error trying to create the index file', function (done) {
 
+            var server = TestHelpers.createTestServer(function (request, reply) {
+
+                reply().code(200);
+            });
             var open = Fs.open;
             var log = console.error;
             var file = TestHelpers.uniqueFilename();
-            var config = TestHelpers.writeConfig({
-                log: './test/fixtures/test_01.log',
-                url: 'http://127.0.0.1:1',
-                resumePath: file
+            server.start(function() {
+
+                var config = TestHelpers.writeConfig({
+                    log: './test/fixtures/test_01.log',
+                    url: server.info.uri,
+                    resumePath: file
+                });
+
+                Fs.open = function (path, flags, callback) {
+
+                    var end = internals.getFrames('.logLastIndex');
+
+                    if  (end.length) {
+                        Fs.open = open;
+                        callback(new Error('mock error'));
+                    }
+                    else {
+                        open.apply(null, arguments);
+                    }
+                };
+
+                console.error = function (value) {
+
+                    expect(value.message).to.equal('mock error');
+                    console.error = log;
+
+                    done();
+                };
+
+                Broadcast.run(['-c', config]);
             });
-
-            Fs.open = function (path, flags, callback) {
-
-                var end = internals.getFrames('.logLastIndex');
-
-                if  (end.length) {
-                    Fs.open = open;
-                    callback(new Error('mock error'), undefined);
-                }
-                else {
-                    open.apply(null, arguments);
-                }
-            };
-
-            console.error = function (value) {
-
-                expect(value.message).to.equal('mock error');
-                console.error = log;
-
-                done();
-            };
-
-            Broadcast.run(['-c', config]);
         });
 
         it('will start reading from 0 if there is a problem with the index file', function (done) {
 
-            var config = TestHelpers.writeConfig({
-                log: './test/fixtures/test_01.log',
-                url: 'http://127.0.0.1:9001',
-                resumePath: '~'
+            var server = TestHelpers.createTestServer(function (request, reply) {
+
+                reply().code(200);
             });
+            server.start(function() {
 
-            var original = Utils.recursiveAsync;
+                var config = TestHelpers.writeConfig({
+                    log: './test/fixtures/test_01.log',
+                    url: server.info.uri,
+                    resumePath: '~'
+                });
 
-            Utils.recursiveAsync = function (init, iterator, callback) {
+                var original = Utils.recursiveAsync;
 
-                Utils.recursiveAsync = original;
-                expect(init.start).to.equal(0);
+                Utils.recursiveAsync = function (init, iterator, callback) {
 
-                done();
-            };
+                    Utils.recursiveAsync = original;
+                    expect(init.start).to.equal(0);
 
-            Broadcast.run(['-c', config]);
+                    done();
+                };
+
+                Broadcast.run(['-c', config]);
+            });
 
         });
 
@@ -319,6 +343,7 @@ describe('Broadcast', function () {
             var server = TestHelpers.createTestServer(function (request, reply) {
 
                 expect(request.payload.events.length).to.equal(1);
+                reply().code(200);
             });
             var resume = TestHelpers.uniqueFilename();
             Fs.writeFileSync(resume, 252);
@@ -523,6 +548,7 @@ describe('Broadcast', function () {
                     expect(id).to.equal(TestHelpers.inlineLogEntry.lineThree.id);
                     done();
                 }
+                reply().code(200);
             });
 
             server.start(function () {
