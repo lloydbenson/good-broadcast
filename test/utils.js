@@ -16,7 +16,7 @@ var internals = {};
 
 describe('Utils', function () {
 
-    describe('forever()', function (){
+    describe('forever()', function () {
 
         it('calls itself recursively asynchronously', function (done) {
 
@@ -28,13 +28,13 @@ describe('Utils', function () {
                 if (value === 10) {
 
                     // Do this to simulate async
-                    setImmediate(function() {
+                    setImmediate(function () {
 
                         callback(true);
                     });
                 }
                 else {
-                    setImmediate(function() {
+                    setImmediate(function () {
 
                         callback(null, value);
                     });
@@ -68,7 +68,8 @@ describe('Utils', function () {
 
             Util.series([
                 function (callback) {
-                    setTimeout(function() {
+
+                    setTimeout(function () {
 
                         result.push(1);
                         callback(null);
@@ -76,7 +77,7 @@ describe('Utils', function () {
                 },
                 function (callback) {
 
-                    setTimeout(function() {
+                    setTimeout(function () {
 
                         result.push(2);
                         callback(null);
@@ -85,7 +86,7 @@ describe('Utils', function () {
             ], function (err) {
 
                 expect(err).to.not.exist;
-                expect(result).to.deep.equal([1,2]);
+                expect(result).to.deep.equal([1, 2]);
                 done();
             });
         });
@@ -93,7 +94,8 @@ describe('Utils', function () {
         it('calls back with an error if one occurs', function (done) {
             Util.series([
                 function (callback) {
-                    setTimeout(function() {
+
+                    setTimeout(function () {
 
                         callback(true);
                     }, 200);

@@ -297,7 +297,6 @@ describe('Broadcast', function () {
             });
 
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            //broadcast = ChildProcess.spawn('node-debug', [broadcastPath, '-c', config]);
             broadcast.stderr.once('data', function (data) {
 
                 expect(data.toString()).to.contain('ECONNREFUSED');

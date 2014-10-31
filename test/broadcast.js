@@ -180,8 +180,8 @@ describe('Broadcast', function () {
 
                 Broadcast.broadcast('test event', {
                     url: server.info.uri,
-                    wait: 1000,
-                    retries: 1
+                    attempts: 1,
+                    wait: 1000
                 }, function (err) {
 
                     expect(err).to.not.exist;
@@ -194,8 +194,8 @@ describe('Broadcast', function () {
         it('does not send empty log messages', function (done) {
 
             Broadcast.broadcast('', {
-                url:'http://localhost:127.0.0.1:1',
-                retries: 1,
+                url: 'http://localhost:127.0.0.1:1',
+                attempts: 1,
                 wait: 1000
             }, function (err) {
 
@@ -207,19 +207,27 @@ describe('Broadcast', function () {
         it('logs an error if there is a problem with Wreck', function (done) {
 
             var log = console.error;
+            var info = console.info;
 
             console.error = function (value) {
 
-                console.error = log;
                 expect(value).to.exist;
                 expect(value.output.statusCode).to.equal(502);
             };
 
+            console.info = function(value) {
+
+                expect(value).to.equal('Retrying broadcast in %s milliseconds');
+            };
+
             Broadcast.broadcast('test message', {
                 url: 'http://localhost:127.0.0.1:1',
-                wait: 1000,
-                retries: 1
+                attempts: 1,
+                wait: 1000
             }, function () {
+
+                console.log = log;
+                console.info = info;
 
                 done();
             });
@@ -315,7 +323,7 @@ describe('Broadcast', function () {
 
                 reply().code(200);
             });
-            server.start(function() {
+            server.start(function () {
 
                 var config = TestHelpers.writeConfig({
                     log: './test/fixtures/test_01.log',
@@ -387,6 +395,7 @@ describe('Broadcast', function () {
 
             var original = Utils.recursiveAsync;
             var log = console.error;
+            var info = console.info;
             var exit = process.exit;
             var output = '';
             var config = TestHelpers.writeConfig({
@@ -399,6 +408,11 @@ describe('Broadcast', function () {
                 output += error.message || error;
             };
 
+            console.info = function (value) {
+
+                expect(value).to.equal('Retrying broadcast in %s milliseconds');
+            };
+
             process.exit = function (code) {
 
                 expect(code).to.equal(1);
@@ -407,6 +421,7 @@ describe('Broadcast', function () {
                 process.exit = exit;
                 Utils.recursiveAsync = original;
                 console.error = log;
+                console.info = info;
 
                 done();
             };
