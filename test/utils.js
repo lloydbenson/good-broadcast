@@ -16,7 +16,7 @@ var internals = {};
 
 describe('Utils', function () {
 
-    describe('forever()', function(){
+    describe('forever()', function () {
 
         it('calls itself recursively asynchronously', function (done) {
 
@@ -28,13 +28,13 @@ describe('Utils', function () {
                 if (value === 10) {
 
                     // Do this to simulate async
-                    setImmediate(function() {
+                    setImmediate(function () {
 
                         callback(true);
                     });
                 }
                 else {
-                    setImmediate(function() {
+                    setImmediate(function () {
 
                         callback(null, value);
                     });
@@ -57,6 +57,54 @@ describe('Utils', function () {
                 });
             }).to.throw('no callback');
             done();
+        });
+    });
+
+    describe('series()', function () {
+
+        it('calls a series of tasks in order', function (done) {
+
+            var result = [];
+
+            Util.series([
+                function (callback) {
+
+                    setTimeout(function () {
+
+                        result.push(1);
+                        callback(null);
+                    }, 200);
+                },
+                function (callback) {
+
+                    setTimeout(function () {
+
+                        result.push(2);
+                        callback(null);
+                    }, 100);
+                }
+            ], function (err) {
+
+                expect(err).to.not.exist;
+                expect(result).to.deep.equal([1, 2]);
+                done();
+            });
+        });
+
+        it('calls back with an error if one occurs', function (done) {
+            Util.series([
+                function (callback) {
+
+                    setTimeout(function () {
+
+                        callback(true);
+                    }, 200);
+                }
+            ], function (err) {
+
+                expect(err).to.be.true;
+                done();
+            });
         });
     });
 });
