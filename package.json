@@ -1,7 +1,7 @@
 {
   "name": "good-broadcast",
   "description": "broadcasting functions for good",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "repository": "git://github.com/hapijs/good-broadcast",
   "main": "index",
   "keywords": [
@@ -27,8 +27,9 @@
     "hapi": ">=2.x.x"
   },
   "devDependencies": {
+    "code": "1.x.x",
     "hapi": "6.x.x",
-    "lab": "4.x.x"
+    "lab": "5.x.x"
   },
   "scripts": {
     "test": "make test-cov"
