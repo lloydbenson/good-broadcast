@@ -1,12 +1,13 @@
 // Load modules
 
+var Code = require('code');
 var Lab = require('lab');
 var Util = require('../lib/utils');
 
 // Test shortcuts
 
 var lab = exports.lab = Lab.script();
-var expect = Lab.expect;
+var expect = Code.expect;
 var describe = lab.describe;
 var it = lab.it;
 
@@ -41,7 +42,7 @@ describe('Utils', function () {
                 }
             }, function (error) {
 
-                expect(error).to.exist;
+                expect(error).to.exist();
                 expect(count).to.equal(10);
                 done();
             });
@@ -85,7 +86,7 @@ describe('Utils', function () {
                 }
             ], function (err) {
 
-                expect(err).to.not.exist;
+                expect(err).to.not.exist();
                 expect(result).to.deep.equal([1, 2]);
                 done();
             });
