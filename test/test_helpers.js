@@ -23,7 +23,8 @@ exports.createTestServer = function (options, handler) {
     options.host = options.host || '127.0.0.1';
     options.port = options.port || 0;
 
-    var server = Hapi.createServer(options.host, options.port);
+    var server = new Hapi.Server();
+    server.connection({ host: options.host, port: options.port });
 
     server.route({
         path: '/',
