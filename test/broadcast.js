@@ -126,7 +126,7 @@ describe('Broadcast', function () {
             process.exit = function (code) {
 
                 expect(code).to.equal(1);
-                expect(output).to.contain('interval must be larger than or equal to 1000');
+                expect(output).to.contain('"interval" must be larger than or equal to 1000');
                 console.log = log;
                 process.exit = exit;
                 done();

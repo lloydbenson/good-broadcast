@@ -20,8 +20,8 @@
   },
   "dependencies": {
     "hoek": "2.x.x",
-    "joi": "5.x.x",
-    "wreck": "5.x.x"
+    "joi": "6.x.x",
+    "wreck": "6.x.x"
   },
   "peerDependencies": {
     "hapi": ">=2.x.x"
