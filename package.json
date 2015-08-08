@@ -3,7 +3,7 @@
   "description": "broadcasting functions for good",
   "version": "1.1.0",
   "repository": "git://github.com/hapijs/good-broadcast",
-  "main": "index",
+  "main": "lib/index.js",
   "keywords": [
     "process",
     "monitor",
@@ -32,7 +32,8 @@
     "lab": "5.x.x"
   },
   "scripts": {
-    "test": "make test-cov"
+    "test": "lab -a code -t 100 -m 5000 -L",
+    "test-cov-html": "lab -a code -t 100 -m 5000 -L -r html -o coverage.html"
   },
   "licenses": [
     {

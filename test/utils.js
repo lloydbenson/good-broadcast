@@ -93,6 +93,7 @@ describe('Utils', function () {
         });
 
         it('calls back with an error if one occurs', function (done) {
+
             Util.series([
                 function (callback) {
 
@@ -103,7 +104,7 @@ describe('Utils', function () {
                 }
             ], function (err) {
 
-                expect(err).to.be.true;
+                expect(err).to.be.true();
                 done();
             });
         });

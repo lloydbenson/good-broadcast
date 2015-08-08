@@ -64,7 +64,7 @@ exports.inlineLogEntry = {
         },
         statusCode: 200,
         timestamp: 1369328752975,
-        toString: function() {
+        toString: function () {
 
             return JSON.stringify(this);
         }
@@ -83,7 +83,7 @@ exports.inlineLogEntry = {
         },
         statusCode: 200,
         timestamp: 1369328753222,
-        toString: function() {
+        toString: function () {
 
             return JSON.stringify(this);
         }
@@ -102,7 +102,7 @@ exports.inlineLogEntry = {
         },
         statusCode: 200,
         timestamp: 1469328953222,
-        toString: function() {
+        toString: function () {
 
             return JSON.stringify(this);
         }

@@ -21,12 +21,12 @@ var it = lab.it;
 // Declare internals
 
 var internals = {
-    getFrames: function(filter) {
+    getFrames: function (filter) {
 
         var stack = new Error().stack.split('\n');
         return stack.filter(function (item) {
 
-           return item.indexOf(filter) > -1;
+            return item.indexOf(filter) > -1;
         });
     }
 };
@@ -59,9 +59,9 @@ describe('Broadcast', function () {
                     expect(init.result.stats).to.exist();
                     expect(init.previous.stats).to.exist();
 
-                    iterator(init, function (error, value) {
+                    iterator(init, function (err, value) {
 
-                        expect(error).to.not.exist();
+                        expect(err).to.not.exist();
                         expect(value.start).to.equal(503);
                         expect(init.result.stats).to.exist();
                         expect(init.previous.stats).to.exist();
@@ -77,6 +77,7 @@ describe('Broadcast', function () {
         });
 
         it('exits for an invalid configuration object (-c)', function (done) {
+
             var config = TestHelpers.uniqueFilename();
             var configObj = {
                 url: 'http://127.0.0.1:31337',
@@ -100,7 +101,7 @@ describe('Broadcast', function () {
             };
 
             var json = JSON.stringify(configObj);
-            json = json.substring(0, json.length -3);
+            json = json.substring(0, json.length - 3);
 
             Fs.writeFileSync(config, json);
 
@@ -139,13 +140,13 @@ describe('Broadcast', function () {
             var log = console.error;
             var exit = process.exit;
 
-            console.error = function(value) {
+            console.error = function (value) {
 
                 console.error = log;
                 expect(value).to.equal('-c or --config option must be present and be a valid file path');
             };
 
-            process.exit = function(code) {
+            process.exit = function (code) {
 
                 process.exit = exit;
                 expect(code).to.equal(1);
@@ -157,7 +158,7 @@ describe('Broadcast', function () {
 
     });
 
-    describe('broadcast', function() {
+    describe('broadcast', function () {
 
         it('sends a message to the supplied url', function (done) {
 
@@ -215,7 +216,7 @@ describe('Broadcast', function () {
                 expect(value.output.statusCode).to.equal(502);
             };
 
-            console.info = function(value) {
+            console.info = function (value) {
 
                 expect(value).to.equal('Retrying broadcast in %s milliseconds');
             };
@@ -246,6 +247,7 @@ describe('Broadcast', function () {
             var resume = TestHelpers.uniqueFilename();
 
             server.start(function () {
+
                 var original = Utils.recursiveAsync;
                 var config = TestHelpers.writeConfig({
                     url: server.info.uri,
@@ -284,7 +286,7 @@ describe('Broadcast', function () {
             var open = Fs.open;
             var log = console.error;
             var file = TestHelpers.uniqueFilename();
-            server.start(function() {
+            server.start(function () {
 
                 var config = TestHelpers.writeConfig({
                     log: './test/fixtures/test_01.log',
@@ -450,10 +452,10 @@ describe('Broadcast', function () {
 
             Utils.recursiveAsync = function (init, iterator, callback) {
 
-                Fs.stat = function (path, callback) {
+                Fs.stat = function (path, cb) {
 
                     Fs.stat = stat;
-                    callback('simulated Fs error');
+                    cb('simulated Fs error');
                 };
 
                 console.error = function (error) {
@@ -518,7 +520,7 @@ describe('Broadcast', function () {
                 init.result = Hoek.clone(init.result);
                 init.result.stats.mtime = new Date();
 
-                Log.get = function (logPath, start, callback) {
+                Log.get = function (logPath, start, cb) {
 
                     // Start gets reset because the file has changed but the length is the same
                     expect(logPath).to.equal('./test/fixtures/test_01.log');
