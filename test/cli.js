@@ -60,11 +60,12 @@ describe('Broadcast', function () {
     });
 
     it('handles a log file that grows', function (done) {
+
         var broadcast = null;
         var runCount = 0;
         var server = TestHelpers.createTestServer(function (request, reply) {
-            var id = Hoek.reach(request, 'payload.events.0.id');
 
+            var id = Hoek.reach(request, 'payload.events.0.id');
             expect(request.payload.schema).to.equal('good.v1');
             if (runCount++ === 0) {
 
@@ -95,7 +96,7 @@ describe('Broadcast', function () {
                 expect(data.toString()).to.not.exist();
             });
 
-            broadcast.once('close', function(code) {
+            broadcast.once('close', function (code) {
 
                 expect(code).to.equal(0);
                 done();
@@ -157,7 +158,7 @@ describe('Broadcast', function () {
                 expect(data.toString()).to.not.exist();
             });
 
-            broadcast.once('close', function(code) {
+            broadcast.once('close', function (code) {
 
                 expect(code).to.equal(0);
                 done();
@@ -173,6 +174,7 @@ describe('Broadcast', function () {
         var runCount = 0;
 
         var server = TestHelpers.createTestServer(function (request, reply) {
+
             expect(request.payload.schema).to.equal('good.v1');
             if (runCount++ === 0) {
 
@@ -212,9 +214,9 @@ describe('Broadcast', function () {
                     expect(data.toString()).to.not.exist();
                 });
 
-                broadcast2.once('close', function(code) {
+                broadcast2.once('close', function (onceCode) {
 
-                    expect(code).to.equal(0);
+                    expect(onceCode).to.equal(0);
                     done();
                 });
 
@@ -254,7 +256,7 @@ describe('Broadcast', function () {
                 broadcast.kill('SIGUSR2');
             });
 
-            broadcast.once('close', function(code) {
+            broadcast.once('close', function (code) {
 
                 expect(code).to.equal(0);
                 done();
@@ -304,7 +306,7 @@ describe('Broadcast', function () {
                 broadcast.kill('SIGUSR2');
             });
 
-            broadcast.once('close', function(code) {
+            broadcast.once('close', function (code) {
 
                 expect(code).to.equal(0);
                 done();
@@ -380,7 +382,7 @@ describe('Broadcast', function () {
                 expect(data.toString()).to.not.exist();
             });
 
-            broadcast.once('close', function(code) {
+            broadcast.once('close', function (code) {
 
                 expect(code).to.equal(0);
                 done();
@@ -402,7 +404,7 @@ describe('Broadcast', function () {
         var broadcast1 = null;
         var broadcast2 = null;
         var hitCount = 0;
-        var server = TestHelpers.createTestServer(function(request, reply) {
+        var server = TestHelpers.createTestServer(function (request, reply) {
 
             hitCount++;
             expect(request.payload.schema).to.equal('good.v1');
@@ -459,9 +461,9 @@ describe('Broadcast', function () {
                     expect(data.toString()).to.not.exist();
                 });
 
-                broadcast2.once('close', function(code) {
+                broadcast2.once('close', function (onceCode) {
 
-                    expect(code).to.equal(0);
+                    expect(onceCode).to.equal(0);
                     done();
                 });
             });

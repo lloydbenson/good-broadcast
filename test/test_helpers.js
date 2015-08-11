@@ -23,7 +23,8 @@ exports.createTestServer = function (options, handler) {
     options.host = options.host || '127.0.0.1';
     options.port = options.port || 0;
 
-    var server = Hapi.createServer(options.host, options.port);
+    var server = new Hapi.Server();
+    server.connection({ host: options.host, port: options.port });
 
     server.route({
         path: '/',
@@ -63,7 +64,7 @@ exports.inlineLogEntry = {
         },
         statusCode: 200,
         timestamp: 1369328752975,
-        toString: function() {
+        toString: function () {
 
             return JSON.stringify(this);
         }
@@ -82,7 +83,7 @@ exports.inlineLogEntry = {
         },
         statusCode: 200,
         timestamp: 1369328753222,
-        toString: function() {
+        toString: function () {
 
             return JSON.stringify(this);
         }
@@ -101,7 +102,7 @@ exports.inlineLogEntry = {
         },
         statusCode: 200,
         timestamp: 1469328953222,
-        toString: function() {
+        toString: function () {
 
             return JSON.stringify(this);
         }

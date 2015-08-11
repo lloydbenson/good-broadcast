@@ -10,10 +10,11 @@ var internals = {
 };
 
 // These should only run once
-process.on('exit', function() {
+process.on('exit', function () {
 
     ChildProcess.exec('rm -rf ' + internals.tempFolder, function (err) {});
 });
+
 if (!Fs.existsSync(internals.tempFolder)) {
     Fs.mkdirSync(internals.tempFolder);
 }

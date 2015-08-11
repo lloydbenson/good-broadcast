@@ -23,12 +23,12 @@ describe('Log', function () {
     describe('get()', function () {
 
         it('reads a log file from the beginning', function (done) {
-            
+
             var expectedResult = [{ event: 'request',
                                      timestamp: 1369328753222,
                                      id: '1369328753222-42369-62002',
                                      instance: 'http://localhost:8080',
-                                     labels: [ 'api', 'http' ],
+                                     labels: ['api', 'http'],
                                      method: 'get',
                                      path: '/test',
                                      query: {},
@@ -40,7 +40,7 @@ describe('Log', function () {
                                      timestamp: 1469328953222,
                                      id: '1469328953222-42369-62002',
                                      instance: 'http://localhost:8080',
-                                     labels: [ 'api', 'http' ],
+                                     labels: ['api', 'http'],
                                      method: 'get',
                                      path: '/test2',
                                      query: {},
@@ -59,7 +59,7 @@ describe('Log', function () {
         });
 
         it('does not load a log file', function (done) {
- 
+
             var trapConsole = console.error;
             Log.get('test/fixtures/nofile.log', 0, function (bytesRead, result) {
 
@@ -68,7 +68,7 @@ describe('Log', function () {
                 expect(result).to.deep.equal([]);
                 done();
             });
-            console.error = function(string) {
+            console.error = function (string) {
 
                 expect(string).to.match(/ENOENT/);
             };
@@ -80,7 +80,7 @@ describe('Log', function () {
                 timestamp: 1369328753222,
                 id: '1369328753222-42369-62002',
                 instance: 'http://localhost:8080',
-                labels: [ 'api', 'http' ],
+                labels: ['api', 'http'],
                 method: 'get',
                 path: '/test',
                 query: {},
@@ -90,7 +90,6 @@ describe('Log', function () {
             }];
 
             Log.get('test/fixtures/incomplete.log', 0, function (bytesRead, result) {
-
 
                 expect(bytesRead).to.equal(252);
                 expect(result).to.deep.equal(expectedResult);
@@ -115,7 +114,7 @@ describe('Log', function () {
             Log.get(file, 0, function (bytesRead, result) {
 
                 expect(bytesRead).to.equal(39);
-                expect(result).to.be.empty;
+                expect(result).to.be.empty();
                 done();
             });
         });
