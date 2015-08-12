@@ -207,10 +207,10 @@ describe('Broadcast', function () {
 
         it('logs an error if there is a problem with Wreck', function (done) {
 
-            var log = console.error;
+            var log = console.log;
             var info = console.info;
 
-            console.error = function (value) {
+            console.log = function (value) {
 
                 expect(value).to.exist();
                 expect(value.output.statusCode).to.equal(502);
