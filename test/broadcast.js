@@ -207,10 +207,10 @@ describe('Broadcast', function () {
 
         it('logs an error if there is a problem with Wreck', function (done) {
 
-            var log = console.error;
+            var log = console.log;
             var info = console.info;
 
-            console.error = function (value) {
+            console.log = function (value) {
 
                 expect(value).to.exist();
                 expect(value.output.statusCode).to.equal(502);
@@ -610,31 +610,30 @@ describe('Broadcast', function () {
 
     it('provides an empty stats object if the file can not be opened', function (done) {
 
-            var config = TestHelpers.writeConfig({
-                log: './test/fixtures/test_01.log',
-                url: 'http://127.0.0.1:9001'
-            });
-
-            var original = Utils.recursiveAsync;
-            var stat = Fs.stat;
-
-            Fs.stat = function (path, callback) {
-
-                Fs.stat = stat;
-                callback(null, null);
-            };
-
-            Utils.recursiveAsync = function (init, iterator, callback) {
-
-                Utils.recursiveAsync = original;
-                expect(init.result.stats).to.deep.equal({});
-                expect(init.result.stats).to.deep.equal({});
-
-                done();
-            };
-
-            Broadcast.run(['-c', config]);
-
+        var config = TestHelpers.writeConfig({
+            log: './test/fixtures/test_01.log',
+            url: 'http://127.0.0.1:9001'
         });
 
+        var original = Utils.recursiveAsync;
+        var stat = Fs.stat;
+
+        Fs.stat = function (path, callback) {
+
+            Fs.stat = stat;
+            callback(null, null);
+        };
+
+        Utils.recursiveAsync = function (init, iterator, callback) {
+
+            Utils.recursiveAsync = original;
+            expect(init.result.stats).to.deep.equal({});
+            expect(init.result.stats).to.deep.equal({});
+
+            done();
+        };
+
+        Broadcast.run(['-c', config]);
+
+    });
 });

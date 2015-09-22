@@ -287,7 +287,7 @@ describe('Broadcast', function () {
 
                 expect(request.payload.events[0].id).to.equal(TestHelpers.inlineLogEntry.lineTwo.id);
                 reply().code(200);
-                server.stop();
+                server.stop(Hoek.ignore);
             }
         });
 

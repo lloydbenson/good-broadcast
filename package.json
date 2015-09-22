@@ -28,17 +28,12 @@
   },
   "devDependencies": {
     "code": "1.x.x",
-    "hapi": "8.x.x",
+    "hapi": "9.x.x",
     "lab": "5.x.x"
   },
   "scripts": {
     "test": "lab -a code -t 100 -m 5000 -L",
     "test-cov-html": "lab -a code -t 100 -m 5000 -L -r html -o coverage.html"
   },
-  "licenses": [
-    {
-      "type": "BSD",
-      "url": "http://github.com/hapijs/good/raw/master/LICENSE"
-    }
-  ]
+  "license": "BSD-3-Clause"
 }
