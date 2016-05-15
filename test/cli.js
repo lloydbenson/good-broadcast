@@ -1,57 +1,52 @@
-// Load modules
+'use strict';
 
-var Code = require('code');
-var ChildProcess = require('child_process');
-var Fs = require('fs');
-var Hoek = require('hoek');
-var Lab = require('lab');
-var Path = require('path');
-var TestHelpers = require('./test_helpers');
+const Code = require('code');
+const ChildProcess = require('child_process');
+const Fs = require('fs');
+const Hoek = require('hoek');
+const Lab = require('lab');
+const Path = require('path');
+const TestHelpers = require('./test_helpers');
 require('./cleanup');
 
-
-// Declare internals
-
-var internals = {};
+const internals = {};
 
 
-// Test shortcuts
+const lab = exports.lab = Lab.script();
+const expect = Code.expect;
+const describe = lab.describe;
+const it = lab.it;
 
-var lab = exports.lab = Lab.script();
-var expect = Code.expect;
-var describe = lab.describe;
-var it = lab.it;
+describe('Broadcast', () => {
 
-describe('Broadcast', function () {
+    const broadcastPath = Path.join(__dirname, '..', 'bin', 'broadcast');
 
-    var broadcastPath = Path.join(__dirname, '..', 'bin', 'broadcast');
-
-    it('sends log file to remote server', function (done) {
+    it('sends log file to remote server', (done) => {
 
 
-        var broadcast = null;
-        var server = TestHelpers.createTestServer(function (request, reply) {
+        let broadcast = null;
+        const server = TestHelpers.createTestServer((request, reply) => {
 
             expect(request.payload.schema).to.equal('good.v1');
             expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
             broadcast.kill('SIGUSR2');
         });
 
-        server.start(function () {
+        server.start(() => {
 
-            var url = server.info.uri;
-            var config = TestHelpers.writeConfig({
+            const url = server.info.uri;
+            const config = TestHelpers.writeConfig({
                 url: url,
                 log:'./test/fixtures/test_01.log'
             });
 
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            broadcast.stderr.on('data', function (data) {
+            broadcast.stderr.on('data', (data) => {
 
                 expect(data.toString()).to.not.exist();
             });
 
-            broadcast.once('close', function (code) {
+            broadcast.once('close', (code) => {
 
                 expect(code).to.equal(0);
                 done();
@@ -59,13 +54,13 @@ describe('Broadcast', function () {
         });
     });
 
-    it('handles a log file that grows', function (done) {
+    it('handles a log file that grows', (done) => {
 
-        var broadcast = null;
-        var runCount = 0;
-        var server = TestHelpers.createTestServer(function (request, reply) {
+        let broadcast = null;
+        let runCount = 0;
+        const server = TestHelpers.createTestServer((request, reply) => {
 
-            var id = Hoek.reach(request, 'payload.events.0.id');
+            const id = Hoek.reach(request, 'payload.events.0.id');
             expect(request.payload.schema).to.equal('good.v1');
             if (runCount++ === 0) {
 
@@ -79,30 +74,30 @@ describe('Broadcast', function () {
             reply().code(200);
         });
 
-        server.start(function () {
+        server.start(() => {
 
-            var url = server.info.uri;
-            var log = TestHelpers.uniqueFilename();
-            var stream = Fs.createWriteStream(log, { flags: 'a' });
-            var config = TestHelpers.writeConfig({
+            const url = server.info.uri;
+            const log = TestHelpers.uniqueFilename();
+            const stream = Fs.createWriteStream(log, { flags: 'a' });
+            const config = TestHelpers.writeConfig({
                 log: log,
                 url: url
             });
 
             stream.write(TestHelpers.inlineLogEntry.lineTwo.toString());
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            broadcast.stderr.on('data', function (data) {
+            broadcast.stderr.on('data', (data) => {
 
                 expect(data.toString()).to.not.exist();
             });
 
-            broadcast.once('close', function (code) {
+            broadcast.once('close', (code) => {
 
                 expect(code).to.equal(0);
                 done();
             });
 
-            setTimeout(function () {
+            setTimeout(() => {
 
                 stream.write(TestHelpers.inlineLogEntry.lineThree.toString());
                 stream.end();
@@ -110,24 +105,24 @@ describe('Broadcast', function () {
         });
     });
 
-    it('handles a log file that gets truncated', function (done) {
+    it('handles a log file that gets truncated', (done) => {
 
-        var log = TestHelpers.uniqueFilename();
-        var broadcast = null;
-        var runCount = 0;
-        var server = TestHelpers.createTestServer(function (request, reply) {
+        const log = TestHelpers.uniqueFilename();
+        let broadcast = null;
+        let runCount = 0;
+        const server = TestHelpers.createTestServer((request, reply) => {
 
-            var id = Hoek.reach(request, 'payload.events.0.id');
+            const id = Hoek.reach(request, 'payload.events.0.id');
 
             expect(request.payload.schema).to.equal('good.v1');
             if (runCount++ === 0) {
 
                 expect(id).to.equal(TestHelpers.inlineLogEntry.lineTwo.id);
 
-                Fs.stat(log, function (err, stat) {
+                Fs.stat(log, (err, stat) => {
 
                     expect(err).to.not.exist();
-                    Fs.truncate(log, stat.size, function (err) {
+                    Fs.truncate(log, stat.size, (err) => {
 
                         expect(err).to.not.exist();
                         Fs.writeFileSync(log, TestHelpers.inlineLogEntry.lineThree.toString());
@@ -142,10 +137,10 @@ describe('Broadcast', function () {
             reply().code(200);
         });
 
-        server.start(function () {
+        server.start(() => {
 
-            var url = server.info.uri;
-            var config = TestHelpers.writeConfig({
+            const url = server.info.uri;
+            const config = TestHelpers.writeConfig({
                 log: log,
                 url: url
             });
@@ -153,12 +148,12 @@ describe('Broadcast', function () {
             Fs.writeFileSync(log, TestHelpers.inlineLogEntry.lineTwo.toString());
 
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            broadcast.stderr.on('data', function (data) {
+            broadcast.stderr.on('data', (data) => {
 
                 expect(data.toString()).to.not.exist();
             });
 
-            broadcast.once('close', function (code) {
+            broadcast.once('close', (code) => {
 
                 expect(code).to.equal(0);
                 done();
@@ -166,14 +161,14 @@ describe('Broadcast', function () {
         });
     });
 
-    it('works when broadcast process is restarted', function (done) {
+    it('works when broadcast process is restarted', (done) => {
 
-        var log = TestHelpers.uniqueFilename();
-        var broadcast1 = null;
-        var broadcast2 = null;
-        var runCount = 0;
+        const log = TestHelpers.uniqueFilename();
+        let broadcast1 = null;
+        let broadcast2 = null;
+        let runCount = 0;
 
-        var server = TestHelpers.createTestServer(function (request, reply) {
+        const server = TestHelpers.createTestServer((request, reply) => {
 
             expect(request.payload.schema).to.equal('good.v1');
             if (runCount++ === 0) {
@@ -188,33 +183,33 @@ describe('Broadcast', function () {
             }
         });
 
-        server.start(function () {
+        server.start(() => {
 
-            var url = server.info.uri;
-            var stream = Fs.createWriteStream(log, { flags: 'a' });
+            const url = server.info.uri;
+            const stream = Fs.createWriteStream(log, { flags: 'a' });
             stream.write(TestHelpers.inlineLogEntry.lineTwo.toString());
 
-            var config = TestHelpers.writeConfig({
+            const config = TestHelpers.writeConfig({
                 log: log,
                 url: url
             });
 
             broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            broadcast1.stderr.on('data', function (data) {
+            broadcast1.stderr.on('data', (data) => {
 
                 expect(data.toString()).to.not.exist();
             });
 
-            broadcast1.once('close', function (code) {
+            broadcast1.once('close', (code) => {
 
                 expect(code).to.equal(0);
                 broadcast2 = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-                broadcast2.stderr.on('data', function (data) {
+                broadcast2.stderr.on('data', (data) => {
 
                     expect(data.toString()).to.not.exist();
                 });
 
-                broadcast2.once('close', function (onceCode) {
+                broadcast2.once('close', (onceCode) => {
 
                     expect(onceCode).to.equal(0);
                     done();
@@ -225,13 +220,13 @@ describe('Broadcast', function () {
         });
     });
 
-    it('handles a log file that has the wrong format', function (done) {
+    it('handles a log file that has the wrong format', (done) => {
 
-        var log = TestHelpers.uniqueFilename();
-        var broadcast = null;
-        var runCount = 0;
-        var nextData = '{"event":"request","timestamp"' + ':1469328953222,"id":"1469328953222-42369-62002","instance":"http://localhost:8080","labels":["api","http"],"method":"get","path":"/test2","query":{},"source":' + '{"remoteAddress":"127.0.0.1"},"responseTime":19,"statusCode":200}';
-        var server = TestHelpers.createTestServer(function (request, reply) {
+        const log = TestHelpers.uniqueFilename();
+        let broadcast = null;
+        let runCount = 0;
+        const nextData = '{"event":"request","timestamp"' + ':1469328953222,"id":"1469328953222-42369-62002","instance":"http://localhost:8080","labels":["api","http"],"method":"get","path":"/test2","query":{},"source":' + '{"remoteAddress":"127.0.0.1"},"responseTime":19,"statusCode":200}';
+        const server = TestHelpers.createTestServer((request, reply) => {
 
             expect(request.payload.schema).to.equal('good.v1');
 
@@ -241,46 +236,46 @@ describe('Broadcast', function () {
             broadcast.kill('SIGUSR2');
         });
 
-        server.start(function () {
+        server.start(() => {
 
-            var url = server.info.uri;
-            var config = TestHelpers.writeConfig({
+            const url = server.info.uri;
+            const config = TestHelpers.writeConfig({
                 url: url,
                 log: log
             });
 
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            broadcast.stderr.on('data', function (data) {
+            broadcast.stderr.on('data', (data) => {
 
                 expect(data.toString()).to.exist();
                 broadcast.kill('SIGUSR2');
             });
 
-            broadcast.once('close', function (code) {
+            broadcast.once('close', (code) => {
 
                 expect(code).to.equal(0);
                 done();
             });
         });
 
-        var stream = Fs.createWriteStream(log, { flags: 'a' });
+        const stream = Fs.createWriteStream(log, { flags: 'a' });
         stream.write(TestHelpers.inlineLogEntry.lineOne.toString());
         stream.write(TestHelpers.inlineLogEntry.lineTwo.toString());
 
-        setTimeout(function () {
+        setTimeout(() => {
 
             stream.write(nextData);
         }, 300);
     });
 
-    it('handles connection errors to remote server', function (done) {
+    it('handles connection errors to remote server', (done) => {
 
-        var log = TestHelpers.uniqueFilename();
-        var broadcast = null;
-        var runCount = 0;
-        var stream = Fs.createWriteStream(log, { flags: 'a' });
+        const log = TestHelpers.uniqueFilename();
+        let broadcast = null;
+        let runCount = 0;
+        const stream = Fs.createWriteStream(log, { flags: 'a' });
         stream.write(TestHelpers.inlineLogEntry.lineTwo.toString());
-        var server = TestHelpers.createTestServer(function (request, reply) {
+        const server = TestHelpers.createTestServer((request, reply) => {
 
             expect(request.payload.schema).to.equal('good.v1');
             if (runCount++ === 0) {
@@ -291,59 +286,59 @@ describe('Broadcast', function () {
             }
         });
 
-        server.start(function () {
+        server.start(() => {
 
-            var url = server.info.uri;
-            var config = TestHelpers.writeConfig({
+            const url = server.info.uri;
+            const config = TestHelpers.writeConfig({
                 log: log,
                 url: url
             });
 
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            broadcast.stderr.once('data', function (data) {
+            broadcast.stderr.once('data', (data) => {
 
                 expect(data.toString()).to.contain('ECONNREFUSED');
                 broadcast.kill('SIGUSR2');
             });
 
-            broadcast.once('close', function (code) {
+            broadcast.once('close', (code) => {
 
                 expect(code).to.equal(0);
                 done();
             });
 
-            setTimeout(function () {
+            setTimeout(() => {
 
                 stream.write(TestHelpers.inlineLogEntry.lineThree.toString());
             }, 300);
         });
     });
 
-    it('sends ops log file to remote server', function (done) {
+    it('sends ops log file to remote server', (done) => {
 
-        var broadcast = null;
-        var server = TestHelpers.createTestServer(function (request, reply) {
+        let broadcast = null;
+        const server = TestHelpers.createTestServer((request, reply) => {
 
             expect(request.payload.schema).to.equal('good.v1');
             expect(request.payload.events[0].timestamp).to.equal(1375466329196);
             broadcast.kill('SIGUSR2');
         });
 
-        server.start(function () {
+        server.start(() => {
 
-            var url = server.info.uri;
-            var config = TestHelpers.writeConfig({
+            const url = server.info.uri;
+            const config = TestHelpers.writeConfig({
                 log: './test/fixtures/test_ops.log',
                 url: url
             });
 
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            broadcast.stderr.on('data', function (data) {
+            broadcast.stderr.on('data', (data) => {
 
                 expect(data.toString()).to.not.exist();
             });
 
-            broadcast.once('close', function (code) {
+            broadcast.once('close', (code) => {
 
                 expect(code).to.equal(0);
                 done();
@@ -351,60 +346,60 @@ describe('Broadcast', function () {
         });
     });
 
-    it('handles a log file that exists when newOnly is enabled', function (done) {
+    it('handles a log file that exists when newOnly is enabled', (done) => {
 
-        var log = TestHelpers.uniqueFilename();
-        var broadcast = null;
+        const log = TestHelpers.uniqueFilename();
+        let broadcast = null;
 
-        var stream = Fs.createWriteStream(log, { flags: 'a' });
+        const stream = Fs.createWriteStream(log, { flags: 'a' });
         stream.write(TestHelpers.inlineLogEntry.lineOne.toString());
         stream.write(TestHelpers.inlineLogEntry.lineTwo.toString());
 
-        var server = TestHelpers.createTestServer(function (request, reply) {
+        const server = TestHelpers.createTestServer((request, reply) => {
 
             expect(request.payload.schema).to.equal('good.v1');
             expect(request.payload.events[0].id).to.equal(TestHelpers.inlineLogEntry.lineThree.id);
             broadcast.kill('SIGUSR2');
         });
 
-        server.start(function () {
+        server.start(() => {
 
-            var url = server.info.uri;
-            var config = TestHelpers.writeConfig({
+            const url = server.info.uri;
+            const config = TestHelpers.writeConfig({
                 log: log,
                 url: url,
                 newOnly: true
             });
 
             broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
-            broadcast.stderr.on('data', function (data) {
+            broadcast.stderr.on('data', (data) => {
 
                 expect(data.toString()).to.not.exist();
             });
 
-            broadcast.once('close', function (code) {
+            broadcast.once('close', (code) => {
 
                 expect(code).to.equal(0);
                 done();
             });
 
-            setTimeout(function () {
+            setTimeout(() => {
 
                 stream.write(TestHelpers.inlineLogEntry.lineThree.toString());
             }, 300);
         });
     });
 
-    it('honors resumePath option', function (done) {
+    it('honors resumePath option', (done) => {
 
-        var log = TestHelpers.uniqueFilename();
-        var lastIndex = TestHelpers.uniqueFilename();
-        var stream = Fs.createWriteStream(log, { flags: 'a' });
+        const log = TestHelpers.uniqueFilename();
+        const lastIndex = TestHelpers.uniqueFilename();
+        const stream = Fs.createWriteStream(log, { flags: 'a' });
 
-        var broadcast1 = null;
-        var broadcast2 = null;
-        var hitCount = 0;
-        var server = TestHelpers.createTestServer(function (request, reply) {
+        let broadcast1 = null;
+        let broadcast2 = null;
+        let hitCount = 0;
+        const server = TestHelpers.createTestServer((request, reply) => {
 
             hitCount++;
             expect(request.payload.schema).to.equal('good.v1');
@@ -417,7 +412,7 @@ describe('Broadcast', function () {
                 stream.write('\n' + TestHelpers.inlineLogEntry.lineTwo.toString());
 
                 // Need to give the write last index enough time to write itself
-                setTimeout(function () {
+                setTimeout(() => {
 
                     broadcast1.kill('SIGUSR2');
                 }, 100);
@@ -434,10 +429,10 @@ describe('Broadcast', function () {
 
         stream.write(TestHelpers.inlineLogEntry.lineOne.toString());
 
-        server.start(function () {
+        server.start(() => {
 
-            var url = server.info.uri;
-            var config = TestHelpers.writeConfig({
+            const url = server.info.uri;
+            const config = TestHelpers.writeConfig({
                 log: log,
                 url: url,
                 resumePath: lastIndex
@@ -445,23 +440,23 @@ describe('Broadcast', function () {
 
             broadcast1 = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
 
-            broadcast1.stderr.on('data', function (data) {
+            broadcast1.stderr.on('data', (data) => {
 
                 expect(data.toString()).to.not.exist();
             });
 
-            broadcast1.once('close', function (code) {
+            broadcast1.once('close', (code) => {
 
                 expect(code).to.equal(0);
 
                 broadcast2 = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
 
-                broadcast2.stderr.on('data', function (data) {
+                broadcast2.stderr.on('data', (data) => {
 
                     expect(data.toString()).to.not.exist();
                 });
 
-                broadcast2.once('close', function (onceCode) {
+                broadcast2.once('close', (onceCode) => {
 
                     expect(onceCode).to.equal(0);
                     done();

@@ -1,30 +1,26 @@
-// Load modules
+'use strict';
 
-var Code = require('code');
-var Lab = require('lab');
-var Fs = require('fs');
-var Log = require('../lib/log');
-var TestHelpers = require('./test_helpers');
+const Code = require('code');
+const Lab = require('lab');
+const Fs = require('fs');
+const Log = require('../lib/log');
+const TestHelpers = require('./test_helpers');
 require('./cleanup');
 
-// Test shortcuts
+const lab = exports.lab = Lab.script();
+const expect = Code.expect;
+const describe = lab.describe;
+const it = lab.it;
 
-var lab = exports.lab = Lab.script();
-var expect = Code.expect;
-var describe = lab.describe;
-var it = lab.it;
+const internals = {};
 
-// Declare internals
+describe('Log', () => {
 
-var internals = {};
+    describe('get()', () => {
 
-describe('Log', function () {
+        it('reads a log file from the beginning', (done) => {
 
-    describe('get()', function () {
-
-        it('reads a log file from the beginning', function (done) {
-
-            var expectedResult = [{ event: 'request',
+            const expectedResult = [{ event: 'request',
                                      timestamp: 1369328753222,
                                      id: '1369328753222-42369-62002',
                                      instance: 'http://localhost:8080',
@@ -49,7 +45,7 @@ describe('Log', function () {
                                      statusCode: 200
                                   }];
 
-            Log.get('test/fixtures/request.log', 0, function (bytesRead, result) {
+            Log.get('test/fixtures/request.log', 0, (bytesRead, result) => {
 
 
                 expect(bytesRead).to.equal(505);
@@ -58,10 +54,10 @@ describe('Log', function () {
             });
         });
 
-        it('does not load a log file', function (done) {
+        it('does not load a log file', (done) => {
 
-            var trapConsole = console.error;
-            Log.get('test/fixtures/nofile.log', 0, function (bytesRead, result) {
+            const trapConsole = console.error;
+            Log.get('test/fixtures/nofile.log', 0, (bytesRead, result) => {
 
                 console.error = trapConsole;
                 expect(bytesRead).to.equal(0);
@@ -74,9 +70,9 @@ describe('Log', function () {
             };
         });
 
-        it('reads to the end of valid JSON', function (done) {
+        it('reads to the end of valid JSON', (done) => {
 
-            var expectedResult = [{ event: 'request',
+            const expectedResult = [{ event: 'request',
                 timestamp: 1369328753222,
                 id: '1369328753222-42369-62002',
                 instance: 'http://localhost:8080',
@@ -89,7 +85,7 @@ describe('Log', function () {
                 statusCode: 200
             }];
 
-            Log.get('test/fixtures/incomplete.log', 0, function (bytesRead, result) {
+            Log.get('test/fixtures/incomplete.log', 0, (bytesRead, result) => {
 
                 expect(bytesRead).to.equal(252);
                 expect(result).to.deep.equal(expectedResult);
@@ -97,11 +93,11 @@ describe('Log', function () {
             });
         });
 
-        it('catches invalid JSON in log files', function (done) {
+        it('catches invalid JSON in log files', (done) => {
 
-            var file = TestHelpers.uniqueFilename();
-            var stream = Fs.createWriteStream(file, { flags: 'a' });
-            var log = console.error;
+            const file = TestHelpers.uniqueFilename();
+            const stream = Fs.createWriteStream(file, { flags: 'a' });
+            const log = console.error;
 
             console.error = function (error) {
 
@@ -111,7 +107,7 @@ describe('Log', function () {
 
             stream.write('{non-JSON string}\nanother weird string}');
 
-            Log.get(file, 0, function (bytesRead, result) {
+            Log.get(file, 0, (bytesRead, result) => {
 
                 expect(bytesRead).to.equal(39);
                 expect(result).to.be.empty();

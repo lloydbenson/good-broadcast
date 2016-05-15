@@ -1,13 +1,11 @@
-//Load modules
+'use strict';
 
-var Hapi = require('hapi');
-var Path = require('path');
-var Crypto = require('crypto');
-var Fs = require('fs');
+const Hapi = require('hapi');
+const Path = require('path');
+const Crypto = require('crypto');
+const Fs = require('fs');
 
-//Declare internals
-
-var internals = {
+const internals = {
     tempFolder: Path.join(__dirname,'_temp')
 };
 
@@ -23,7 +21,7 @@ exports.createTestServer = function (options, handler) {
     options.host = options.host || '127.0.0.1';
     options.port = options.port || 0;
 
-    var server = new Hapi.Server();
+    const server = new Hapi.Server();
     server.connection({ host: options.host, port: options.port });
 
     server.route({
@@ -37,13 +35,13 @@ exports.createTestServer = function (options, handler) {
 
 exports.uniqueFilename = function () {
 
-    var name = [Date.now(), process.pid, Crypto.randomBytes(8).toString('hex')].join('-') + '.__test';
+    const name = [Date.now(), process.pid, Crypto.randomBytes(8).toString('hex')].join('-') + '.__test';
     return Path.join(internals.tempFolder, name);
 };
 
 exports.writeConfig = function (options) {
 
-    var config = exports.uniqueFilename();
+    const config = exports.uniqueFilename();
     Fs.writeFileSync(config, JSON.stringify(options));
 
     return config;

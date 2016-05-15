@@ -1,18 +1,17 @@
-// Load modules
+'use strict';
 
-var Fs = require('fs');
-var ChildProcess = require('child_process');
-var Path = require('path');
+const Fs = require('fs');
+const ChildProcess = require('child_process');
+const Path = require('path');
 
-// Declare internals
-var internals = {
+const internals = {
     tempFolder: Path.join(__dirname,'_temp')
 };
 
 // These should only run once
-process.on('exit', function () {
+process.on('exit', () => {
 
-    ChildProcess.exec('rm -rf ' + internals.tempFolder, function (err) {});
+    ChildProcess.exec('rm -rf ' + internals.tempFolder, (err1) => {});
 });
 
 if (!Fs.existsSync(internals.tempFolder)) {

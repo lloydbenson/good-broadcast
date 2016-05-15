@@ -1,46 +1,43 @@
-// Load modules
+'use strict';
+const Code = require('code');
+const Lab = require('lab');
+const Util = require('../lib/utils');
 
-var Code = require('code');
-var Lab = require('lab');
-var Util = require('../lib/utils');
-
-// Test shortcuts
-
-var lab = exports.lab = Lab.script();
-var expect = Code.expect;
-var describe = lab.describe;
-var it = lab.it;
+const lab = exports.lab = Lab.script();
+const expect = Code.expect;
+const describe = lab.describe;
+const it = lab.it;
 
 // Declare internals
 
-var internals = {};
+const internals = {};
 
-describe('Utils', function () {
+describe('Utils', () => {
 
-    describe('forever()', function () {
+    describe('forever()', () => {
 
-        it('calls itself recursively asynchronously', function (done) {
+        it('calls itself recursively asynchronously', (done) => {
 
-            var count = 0;
-            Util.recursiveAsync(0, function (value, callback) {
+            let count = 0;
+            Util.recursiveAsync(0, (value, callback) => {
 
                 value++;
                 count = value;
                 if (value === 10) {
 
                     // Do this to simulate async
-                    setImmediate(function () {
+                    setImmediate(() => {
 
                         callback(true);
                     });
                 }
                 else {
-                    setImmediate(function () {
+                    setImmediate(() => {
 
                         callback(null, value);
                     });
                 }
-            }, function (error) {
+            }, (error) => {
 
                 expect(error).to.exist();
                 expect(count).to.equal(10);
@@ -48,11 +45,11 @@ describe('Utils', function () {
             });
         });
 
-        it('throw an error if no callback supplied', function (done) {
+        it('throw an error if no callback supplied', (done) => {
 
-            expect(function () {
+            expect(() => {
 
-                Util.recursiveAsync(0, function (value, callback) {
+                Util.recursiveAsync(0, (value, callback) => {
 
                     callback(new Error('no callback'));
                 });
@@ -61,16 +58,16 @@ describe('Utils', function () {
         });
     });
 
-    describe('series()', function () {
+    describe('series()', () => {
 
-        it('calls a series of tasks in order', function (done) {
+        it('calls a series of tasks in order', (done) => {
 
-            var result = [];
+            const result = [];
 
             Util.series([
                 function (callback) {
 
-                    setTimeout(function () {
+                    setTimeout(() => {
 
                         result.push(1);
                         callback(null);
@@ -78,13 +75,13 @@ describe('Utils', function () {
                 },
                 function (callback) {
 
-                    setTimeout(function () {
+                    setTimeout(() => {
 
                         result.push(2);
                         callback(null);
                     }, 100);
                 }
-            ], function (err) {
+            ], (err) => {
 
                 expect(err).to.not.exist();
                 expect(result).to.deep.equal([1, 2]);
@@ -92,17 +89,17 @@ describe('Utils', function () {
             });
         });
 
-        it('calls back with an error if one occurs', function (done) {
+        it('calls back with an error if one occurs', (done) => {
 
             Util.series([
                 function (callback) {
 
-                    setTimeout(function () {
+                    setTimeout(() => {
 
                         callback(true);
                     }, 200);
                 }
-            ], function (err) {
+            ], (err) => {
 
                 expect(err).to.be.true();
                 done();

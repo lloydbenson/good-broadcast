@@ -1,30 +1,30 @@
-//Load modules
+'use strict';
 
-var Code = require('code');
-var Fs = require('fs');
-var Hoek = require('hoek');
-var Lab = require('lab');
-var Broadcast = require('../lib/cli');
-var Log = require('../lib/log');
-var TestHelpers = require('./test_helpers');
-var Utils = require('../lib/utils');
+const Code = require('code');
+const Fs = require('fs');
+const Hoek = require('hoek');
+const Lab = require('lab');
+const Broadcast = require('../lib/cli');
+const Log = require('../lib/log');
+const TestHelpers = require('./test_helpers');
+const Utils = require('../lib/utils');
 require('./cleanup');
 
 
 // Test shortcuts
 
-var lab = exports.lab = Lab.script();
-var expect = Code.expect;
-var describe = lab.describe;
-var it = lab.it;
+const lab = exports.lab = Lab.script();
+const expect = Code.expect;
+const describe = lab.describe;
+const it = lab.it;
 
 // Declare internals
 
-var internals = {
+const internals = {
     getFrames: function (filter) {
 
-        var stack = new Error().stack.split('\n');
-        return stack.filter(function (item) {
+        const stack = new Error().stack.split('\n');
+        return stack.filter((item) => {
 
             return item.indexOf(filter) > -1;
         });
@@ -32,23 +32,23 @@ var internals = {
 };
 
 
-describe('Broadcast', function () {
+describe('Broadcast', () => {
 
-    describe('options', function () {
+    describe('options', () => {
 
-        it('accepts a configuration object (-c)', function (done) {
+        it('accepts a configuration object (-c)', (done) => {
 
-            var server = TestHelpers.createTestServer(function (request, reply) {
+            const server = TestHelpers.createTestServer((request, reply) => {
 
                 expect(request.payload.schema).to.equal('good.v1');
                 expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
                 reply().code(200);
             });
 
-            server.start(function () {
+            server.start(() => {
 
-                var original = Utils.recursiveAsync;
-                var config = TestHelpers.writeConfig({
+                const original = Utils.recursiveAsync;
+                const config = TestHelpers.writeConfig({
                     url: server.info.uri,
                     log: './test/fixtures/test_01.log'
                 });
@@ -59,7 +59,7 @@ describe('Broadcast', function () {
                     expect(init.result.stats).to.exist();
                     expect(init.previous.stats).to.exist();
 
-                    iterator(init, function (err, value) {
+                    iterator(init, (err, value) => {
 
                         expect(err).to.not.exist();
                         expect(value.start).to.equal(503);
@@ -76,15 +76,15 @@ describe('Broadcast', function () {
             });
         });
 
-        it('exits for an invalid configuration object (-c)', function (done) {
+        it('exits for an invalid configuration object (-c)', (done) => {
 
-            var config = TestHelpers.uniqueFilename();
-            var configObj = {
+            const config = TestHelpers.uniqueFilename();
+            const configObj = {
                 url: 'http://127.0.0.1:31337',
                 log: './test/fixtures/test_01.log'
             };
-            var log = console.error;
-            var exit = process.exit;
+            const log = console.error;
+            const exit = process.exit;
 
             console.error = function (value) {
 
@@ -100,7 +100,7 @@ describe('Broadcast', function () {
                 done();
             };
 
-            var json = JSON.stringify(configObj);
+            let json = JSON.stringify(configObj);
             json = json.substring(0, json.length - 3);
 
             Fs.writeFileSync(config, json);
@@ -108,15 +108,15 @@ describe('Broadcast', function () {
             Broadcast.run(['-c', config]);
         });
 
-        it('logs validation errors', function (done) {
+        it('logs validation errors', (done) => {
 
-            var log = console.error;
-            var exit = process.exit;
-            var config = TestHelpers.writeConfig({
+            const log = console.error;
+            const exit = process.exit;
+            const config = TestHelpers.writeConfig({
                 url: 'http://127.0.0.1:31338',
                 interval: 10
             });
-            var output = '';
+            let output = '';
 
             console.error = function (value) {
 
@@ -135,10 +135,10 @@ describe('Broadcast', function () {
             Broadcast.run(['--config', config]);
         });
 
-        it('exits for invalid arguments as an option argument', function (done) {
+        it('exits for invalid arguments as an option argument', (done) => {
 
-            var log = console.error;
-            var exit = process.exit;
+            const log = console.error;
+            const exit = process.exit;
 
             console.error = function (value) {
 
@@ -158,32 +158,32 @@ describe('Broadcast', function () {
 
     });
 
-    describe('broadcast', function () {
+    describe('broadcast', () => {
 
-        it('sends a message to the supplied url', function (done) {
+        it('sends a message to the supplied url', (done) => {
 
-            var server = TestHelpers.createTestServer(function (request, reply) {
+            const server = TestHelpers.createTestServer((request, reply) => {
 
                 expect(request.payload.events).to.equal('test event');
                 reply(200);
             });
 
-            var write = process.stdout.write;
+            const write = process.stdout.write;
 
             process.stdout.write = function (chunk, encoding, cb) {
 
                 process.stdout.write = write;
-                var result = ~~(chunk.toString());
+                const result = ~~(chunk.toString());
                 expect(result).to.equal(200);
             };
 
-            server.start(function () {
+            server.start(() => {
 
                 Broadcast.broadcast('test event', {
                     url: server.info.uri,
                     attempts: 1,
                     wait: 1000
-                }, function (err) {
+                }, (err) => {
 
                     expect(err).to.not.exist();
                     done();
@@ -192,23 +192,23 @@ describe('Broadcast', function () {
 
         });
 
-        it('does not send empty log messages', function (done) {
+        it('does not send empty log messages', (done) => {
 
             Broadcast.broadcast('', {
                 url: 'http://localhost:127.0.0.1:1',
                 attempts: 1,
                 wait: 1000
-            }, function (err) {
+            }, (err) => {
 
                 expect(err).to.not.exist();
                 done();
             });
         });
 
-        it('logs an error if there is a problem with Wreck', function (done) {
+        it('logs an error if there is a problem with Wreck', (done) => {
 
-            var log = console.log;
-            var info = console.info;
+            const log = console.log;
+            const info = console.info;
 
             console.log = function (value) {
 
@@ -225,7 +225,7 @@ describe('Broadcast', function () {
                 url: 'http://localhost:127.0.0.1:1',
                 attempts: 1,
                 wait: 1000
-            }, function () {
+            }, () => {
 
                 console.log = log;
                 console.info = info;
@@ -235,21 +235,21 @@ describe('Broadcast', function () {
         });
     });
 
-    describe('resume', function () {
+    describe('resume', () => {
 
-        it('creates the file indicated by resumePath', function (done) {
+        it('creates the file indicated by resumePath', (done) => {
 
-            var server = TestHelpers.createTestServer(function (request, reply) {
+            const server = TestHelpers.createTestServer((request, reply) => {
 
                 expect(request.payload.events.length).to.equal(2);
                 reply().code(200);
             });
-            var resume = TestHelpers.uniqueFilename();
+            const resume = TestHelpers.uniqueFilename();
 
-            server.start(function () {
+            server.start(() => {
 
-                var original = Utils.recursiveAsync;
-                var config = TestHelpers.writeConfig({
+                const original = Utils.recursiveAsync;
+                const config = TestHelpers.writeConfig({
                     url: server.info.uri,
                     log: './test/fixtures/test_01.log',
                     resumePath: resume
@@ -261,9 +261,9 @@ describe('Broadcast', function () {
                     expect(init.result.stats).to.exist();
                     expect(init.previous.stats).to.exist();
 
-                    iterator(init, function (value, next) {
+                    iterator(init, (value, next) => {
 
-                        var file = Fs.readFileSync(resume, {
+                        const file = Fs.readFileSync(resume, {
                             encoding: 'utf8'
                         });
                         expect(file).to.equal('503');
@@ -277,18 +277,18 @@ describe('Broadcast', function () {
             });
         });
 
-        it('logs an error trying to create the index file', function (done) {
+        it('logs an error trying to create the index file', (done) => {
 
-            var server = TestHelpers.createTestServer(function (request, reply) {
+            const server = TestHelpers.createTestServer((request, reply) => {
 
                 reply().code(200);
             });
-            var open = Fs.open;
-            var log = console.error;
-            var file = TestHelpers.uniqueFilename();
-            server.start(function () {
+            const open = Fs.open;
+            const log = console.error;
+            const file = TestHelpers.uniqueFilename();
+            server.start(() => {
 
-                var config = TestHelpers.writeConfig({
+                const config = TestHelpers.writeConfig({
                     log: './test/fixtures/test_01.log',
                     url: server.info.uri,
                     resumePath: file
@@ -296,7 +296,7 @@ describe('Broadcast', function () {
 
                 Fs.open = function (path, flags, callback) {
 
-                    var end = internals.getFrames('.logLastIndex');
+                    const end = internals.getFrames('.logLastIndex');
 
                     if  (end.length) {
                         Fs.open = open;
@@ -319,21 +319,21 @@ describe('Broadcast', function () {
             });
         });
 
-        it('will start reading from 0 if there is a problem with the index file', function (done) {
+        it('will start reading from 0 if there is a problem with the index file', (done) => {
 
-            var server = TestHelpers.createTestServer(function (request, reply) {
+            const server = TestHelpers.createTestServer((request, reply) => {
 
                 reply().code(200);
             });
-            server.start(function () {
+            server.start(() => {
 
-                var config = TestHelpers.writeConfig({
+                const config = TestHelpers.writeConfig({
                     log: './test/fixtures/test_01.log',
                     url: server.info.uri,
                     resumePath: '~'
                 });
 
-                var original = Utils.recursiveAsync;
+                const original = Utils.recursiveAsync;
 
                 Utils.recursiveAsync = function (init, iterator, callback) {
 
@@ -348,20 +348,20 @@ describe('Broadcast', function () {
 
         });
 
-        it('starts reading from the last index file', function (done) {
+        it('starts reading from the last index file', (done) => {
 
-            var server = TestHelpers.createTestServer(function (request, reply) {
+            const server = TestHelpers.createTestServer((request, reply) => {
 
                 expect(request.payload.events.length).to.equal(1);
                 reply().code(200);
             });
-            var resume = TestHelpers.uniqueFilename();
+            const resume = TestHelpers.uniqueFilename();
             Fs.writeFileSync(resume, 252);
 
-            server.start(function () {
+            server.start(() => {
 
-                var original = Utils.recursiveAsync;
-                var config = TestHelpers.writeConfig({
+                const original = Utils.recursiveAsync;
+                const config = TestHelpers.writeConfig({
                     url: server.info.uri,
                     log: './test/fixtures/test_01.log',
                     resumePath: resume
@@ -373,9 +373,9 @@ describe('Broadcast', function () {
                     expect(init.result.stats).to.exist();
                     expect(init.previous.stats).to.exist();
 
-                    iterator(init, function (value, next) {
+                    iterator(init, (value, next) => {
 
-                        var file = Fs.readFileSync(resume, {
+                        const file = Fs.readFileSync(resume, {
                             encoding: 'utf8'
                         });
                         expect(file).to.equal('503');
@@ -391,16 +391,16 @@ describe('Broadcast', function () {
 
     });
 
-    describe('recursive logic', function () {
+    describe('recursive logic', () => {
 
-        it('logs an error if there is an async error', function (done) {
+        it('logs an error if there is an async error', (done) => {
 
-            var original = Utils.recursiveAsync;
-            var log = console.error;
-            var info = console.info;
-            var exit = process.exit;
-            var output = '';
-            var config = TestHelpers.writeConfig({
+            const original = Utils.recursiveAsync;
+            const log = console.error;
+            const info = console.info;
+            const exit = process.exit;
+            let output = '';
+            const config = TestHelpers.writeConfig({
                 log: './test/fixtures/test_01.log',
                 url: 'http://127.0.0.1:9001'
             });
@@ -430,7 +430,7 @@ describe('Broadcast', function () {
 
             Utils.recursiveAsync = function (init, iterator, callback) {
 
-                iterator(init, function (value, error) {
+                iterator(init, (value, error) => {
 
                     callback(new Error('async error'));
                 });
@@ -439,13 +439,13 @@ describe('Broadcast', function () {
             Broadcast.run(['-c', config]);
         });
 
-        it('logs an error if there is a I/O error', function (done) {
+        it('logs an error if there is a I/O error', (done) => {
 
-            var original = Utils.recursiveAsync;
-            var log = console.error;
-            var stat = Fs.stat;
+            const original = Utils.recursiveAsync;
+            const log = console.error;
+            const stat = Fs.stat;
 
-            var config = TestHelpers.writeConfig({
+            const config = TestHelpers.writeConfig({
                 log: './test/fixtures/test_01.log',
                 url: 'http://127.0.0.1:9001'
             });
@@ -465,7 +465,7 @@ describe('Broadcast', function () {
                 };
 
 
-                iterator(init, function (error, value) {
+                iterator(init, (error, value) => {
 
                     expect(error).to.equal(null);
                     Utils.recursiveAsync = original;
@@ -476,11 +476,11 @@ describe('Broadcast', function () {
             Broadcast.run(['-c', config]);
         });
 
-        it('cleans up when the final callback executes, even without an error', function (done) {
+        it('cleans up when the final callback executes, even without an error', (done) => {
 
-            var original = Utils.recursiveAsync;
-            var exit = process.exit;
-            var config = TestHelpers.writeConfig({
+            const original = Utils.recursiveAsync;
+            const exit = process.exit;
+            const config = TestHelpers.writeConfig({
                 log: './test/fixtures/test_01.log',
                 url: 'http://127.0.0.1:1'
             });
@@ -502,11 +502,11 @@ describe('Broadcast', function () {
             Broadcast.run(['-c', config]);
         });
 
-        it('uses the newer file if the lengths are the same', function (done) {
+        it('uses the newer file if the lengths are the same', (done) => {
 
-            var original = Utils.recursiveAsync;
-            var get = Log.get;
-            var config = TestHelpers.writeConfig({
+            const original = Utils.recursiveAsync;
+            const get = Log.get;
+            const config = TestHelpers.writeConfig({
                 log: './test/fixtures/test_01.log',
                 url: 'http://127.0.0.1:1'
             });
@@ -531,29 +531,29 @@ describe('Broadcast', function () {
                     done();
                 };
 
-                iterator(init, function () {});
+                iterator(init, () => {});
             };
 
             Broadcast.run(['-c', config]);
         });
 
-        it('starts from the beginning of log file if it has been truncated', function (done) {
+        it('starts from the beginning of log file if it has been truncated', (done) => {
 
-            var log = TestHelpers.uniqueFilename();
-            var runCount = 0;
-            var server = TestHelpers.createTestServer(function (request, reply) {
+            const log = TestHelpers.uniqueFilename();
+            let runCount = 0;
+            const server = TestHelpers.createTestServer((request, reply) => {
 
-                var id = Hoek.reach(request, 'payload.events.0.id');
+                const id = Hoek.reach(request, 'payload.events.0.id');
 
                 expect(request.payload.schema).to.equal('good.v1');
                 if (runCount++ === 0) {
 
                     expect(id).to.equal(TestHelpers.inlineLogEntry.lineTwo.id);
 
-                    Fs.stat(log, function (err, stat) {
+                    Fs.stat(log, (err, stat) => {
 
                         expect(err).to.not.exist();
-                        Fs.truncate(log, stat.size, function (err) {
+                        Fs.truncate(log, stat.size, (err) => {
 
                             expect(err).to.not.exist();
                             Fs.writeFileSync(log, TestHelpers.inlineLogEntry.lineThree.toString());
@@ -568,10 +568,10 @@ describe('Broadcast', function () {
                 reply().code(200);
             });
 
-            server.start(function () {
+            server.start(() => {
 
-                var url = server.info.uri;
-                var config = TestHelpers.writeConfig({
+                const url = server.info.uri;
+                const config = TestHelpers.writeConfig({
                     log: log,
                     url: url
                 });
@@ -584,15 +584,15 @@ describe('Broadcast', function () {
 
         });
 
-        it('will start reading from the end of the log file if newOnly is true', function (done) {
+        it('will start reading from the end of the log file if newOnly is true', (done) => {
 
-            var config = TestHelpers.writeConfig({
+            const config = TestHelpers.writeConfig({
                 log: './test/fixtures/test_01.log',
                 url: 'http://127.0.0.1:9001',
                 newOnly: true
             });
 
-            var original = Utils.recursiveAsync;
+            const original = Utils.recursiveAsync;
 
             Utils.recursiveAsync = function (init, iterator, callback) {
 
@@ -608,15 +608,15 @@ describe('Broadcast', function () {
     });
 
 
-    it('provides an empty stats object if the file can not be opened', function (done) {
+    it('provides an empty stats object if the file can not be opened', (done) => {
 
-        var config = TestHelpers.writeConfig({
+        const config = TestHelpers.writeConfig({
             log: './test/fixtures/test_01.log',
             url: 'http://127.0.0.1:9001'
         });
 
-        var original = Utils.recursiveAsync;
-        var stat = Fs.stat;
+        const original = Utils.recursiveAsync;
+        const stat = Fs.stat;
 
         Fs.stat = function (path, callback) {
 

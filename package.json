@@ -1,7 +1,7 @@
 {
   "name": "good-broadcast",
   "description": "broadcasting functions for good",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "repository": "git://github.com/hapijs/good-broadcast",
   "main": "lib/index.js",
   "keywords": [
@@ -13,23 +13,20 @@
     "plugin"
   ],
   "engines": {
-    "node": ">=0.10.x"
+    "node": ">=4"
   },
   "bin": {
     "broadcast": "./bin/broadcast"
   },
   "dependencies": {
-    "hoek": "2.x.x",
-    "joi": "6.x.x",
-    "wreck": "6.x.x"
-  },
-  "peerDependencies": {
-    "hapi": ">=2.x.x"
+    "hoek": "4.x.x",
+    "joi": "8.x.x",
+    "wreck": "7.x.x"
   },
   "devDependencies": {
-    "code": "1.x.x",
-    "hapi": "9.x.x",
-    "lab": "5.x.x"
+    "code": "2.x.x",
+    "hapi": "13.x.x",
+    "lab": "10.x.x"
   },
   "scripts": {
     "test": "lab -a code -t 100 -m 5000 -L",
