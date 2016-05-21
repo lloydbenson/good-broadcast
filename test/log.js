@@ -49,7 +49,7 @@ describe('Log', () => {
 
 
                 expect(bytesRead).to.equal(505);
-                expect(result).to.deep.equal(expectedResult);
+                expect(result).to.equal(expectedResult);
                 done();
             });
         });
@@ -61,7 +61,7 @@ describe('Log', () => {
 
                 console.error = trapConsole;
                 expect(bytesRead).to.equal(0);
-                expect(result).to.deep.equal([]);
+                expect(result).to.equal([]);
                 done();
             });
             console.error = function (string) {
@@ -88,7 +88,7 @@ describe('Log', () => {
             Log.get('test/fixtures/incomplete.log', 0, (bytesRead, result) => {
 
                 expect(bytesRead).to.equal(252);
-                expect(result).to.deep.equal(expectedResult);
+                expect(result).to.equal(expectedResult);
                 done();
             });
         });

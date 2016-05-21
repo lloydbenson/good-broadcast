@@ -84,7 +84,7 @@ describe('Utils', () => {
             ], (err) => {
 
                 expect(err).to.not.exist();
-                expect(result).to.deep.equal([1, 2]);
+                expect(result).to.equal([1, 2]);
                 done();
             });
         });

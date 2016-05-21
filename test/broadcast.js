@@ -627,8 +627,8 @@ describe('Broadcast', () => {
         Utils.recursiveAsync = function (init, iterator, callback) {
 
             Utils.recursiveAsync = original;
-            expect(init.result.stats).to.deep.equal({});
-            expect(init.result.stats).to.deep.equal({});
+            expect(init.result.stats).to.equal({});
+            expect(init.result.stats).to.equal({});
 
             done();
         };
