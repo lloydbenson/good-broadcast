@@ -346,6 +346,131 @@ describe('Broadcast', () => {
         });
     });
 
+    it('sends payload with no more than maxEvents', (done) => {
+
+        let broadcast = null;
+        let events = [];
+
+        const server = TestHelpers.createTestServer((request, reply) => {
+
+            expect(request.payload.schema).to.equal('good.v1');
+            expect(request.payload.events).to.have.length(1);
+            expect(request.payload.events[0].timestamp).to.exist();
+
+            events = events.concat(request.payload.events);
+            if (events.length === 2) {
+                broadcast.kill('SIGUSR2');
+            }
+
+            return reply();
+        });
+
+        server.start(() => {
+
+            const url = server.info.uri;
+            const config = TestHelpers.writeConfig({
+                log: './test/fixtures/request.log',
+                url: url,
+                maxEvents: 1
+            });
+
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
+            broadcast.stderr.on('data', (data) => {
+
+                expect(data.toString()).to.not.exist();
+            });
+
+            broadcast.once('close', (code) => {
+
+                expect(code).to.equal(0);
+                done();
+            });
+        });
+    });
+
+    it('sends payload with no more than maxSize', (done) => {
+
+        let broadcast = null;
+        let events = [];
+
+        const server = TestHelpers.createTestServer((request, reply) => {
+
+            expect(request.payload.schema).to.equal('good.v1');
+            expect(request.payload.events).to.have.length(1);
+            expect(request.payload.events[0].timestamp).to.exist();
+
+            events = events.concat(request.payload.events);
+            if (events.length === 2) {
+                broadcast.kill('SIGUSR2');
+            }
+
+            return reply();
+        });
+
+        server.start(() => {
+
+            const url = server.info.uri;
+            const config = TestHelpers.writeConfig({
+                log: './test/fixtures/request.log',
+                url: url,
+                maxSize: 256
+            });
+
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
+            broadcast.stderr.on('data', (data) => {
+
+                expect(data.toString()).to.not.exist();
+            });
+
+            broadcast.once('close', (code) => {
+
+                expect(code).to.equal(0);
+                done();
+            });
+        });
+    });
+
+    it('handles event that exceeds maxSize', (done) => {
+
+        let broadcast = null;
+        let events = [];
+
+        const server = TestHelpers.createTestServer((request, reply) => {
+
+            expect(request.payload.schema).to.equal('good.v1');
+            expect(request.payload.events[0].timestamp).to.equal(1469328953222);
+
+            events = events.concat(request.payload.events);
+            if (events.length === 1) {
+                broadcast.kill('SIGUSR2');
+            }
+
+            return reply();
+        });
+
+        server.start(() => {
+
+            const url = server.info.uri;
+            const config = TestHelpers.writeConfig({
+                log: './test/fixtures/request.log',
+                url: url,
+                maxSize: 253
+            });
+
+            broadcast = ChildProcess.spawn(process.execPath, [broadcastPath, '-c', config]);
+            broadcast.stderr.on('data', (data) => {
+
+                expect(data.toString()).match(/eventSize 254 exceeds maxSize 253/);
+            });
+
+            broadcast.once('close', (code) => {
+
+                expect(code).to.equal(0);
+                done();
+            });
+        });
+    });
+
     it('handles a log file that exists when newOnly is enabled', (done) => {
 
         const log = TestHelpers.uniqueFilename();

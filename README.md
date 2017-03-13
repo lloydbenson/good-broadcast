@@ -22,7 +22,9 @@ A broadcast.json may look like:
     "newOnly": true,
     "resumePath": "/fullpath/temp/logindex.tmp",
     "wait": 1000,
-    "attempts": 1
+    "attempts": 1,
+    "maxEvents": 32,
+    "maxSize": 65535
 }
 ```
 
@@ -35,6 +37,8 @@ A broadcast.json may look like:
 - `resumePath` - Maintain a file to keep track of previous reads and start from that index on restarts or failures.
 - `wait` - Number of milliseconds to wait before trying a failed broadcast again. Defaults to 1000.
 - `attempts` - Number attempts to make before giving up on the current payload. Defaults to 1.
+- `maxEvents` - Maximum events per payload. Default to 32.
+- `maxSize` - Maximum payload size in bytes. Default to 65535.
 
 ### Killing Process
 Sending issuing `kill -SIGUSR2 PID`, where PID is the running broadcast script. You can get the PID with the following linux command `ps auxww | grep node`.

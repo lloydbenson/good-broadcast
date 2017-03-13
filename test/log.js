@@ -29,7 +29,7 @@ describe('Log', () => {
                                      path: '/test',
                                      query: {},
                                      source: { remoteAddress: '127.0.0.1' },
-                                     responseTime: 9,
+                                     responseTime: 9000,
                                      statusCode: 200
                                   },
                                   { event: 'request',
@@ -47,8 +47,7 @@ describe('Log', () => {
 
             Log.get('test/fixtures/request.log', 0, (bytesRead, result) => {
 
-
-                expect(bytesRead).to.equal(505);
+                expect(bytesRead).to.equal(509);
                 expect(result).to.equal(expectedResult);
                 done();
             });

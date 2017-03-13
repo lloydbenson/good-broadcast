@@ -106,4 +106,44 @@ describe('Utils', () => {
             });
         });
     });
+
+    describe('batch()', () => {
+
+        it('respects maxEvents', (done) => {
+
+            const logs = [{ foo: 1 }, { bar: 2 }];
+            const options = { maxEvents: 1 };
+            const batch = Util.batch(logs, options);
+
+            expect(batch).to.have.length(2);
+            done();
+        });
+
+        it('respects maxSize', (done) => {
+
+            const logs = [{ foo: 10 }, { bar: 20 }];
+            const options = { maxSize: 10 };
+            const batch = Util.batch(logs, options);
+
+            expect(batch).to.have.length(2);
+            done();
+        });
+
+        it('logs error when a single log exceeds maxSize', (done) => {
+
+            const output = console.error;
+            console.error = function (error) {
+
+                expect(error).match(/eventSize 12 exceeds maxSize 10/);
+            };
+
+            const logs = [{ foo: 1000 }, { bar: 2 }];
+            const options = { maxSize: 10 };
+            const batch = Util.batch(logs, options);
+
+            console.error = output;
+            expect(batch).to.have.length(1);
+            done();
+        });
+    });
 });
