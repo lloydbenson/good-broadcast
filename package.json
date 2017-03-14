@@ -1,7 +1,7 @@
 {
   "name": "good-broadcast",
   "description": "broadcasting functions for good",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "repository": "git://github.com/hapijs/good-broadcast",
   "main": "lib/index.js",
   "keywords": [
