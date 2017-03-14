@@ -42,7 +42,7 @@ describe('Broadcast', () => {
 
                 expect(request.payload.schema).to.equal('good.v1');
                 expect(request.payload.events[1].id).to.equal('1369328753222-42369-62002');
-                reply().code(200);
+                return reply().code(200);
             });
 
             server.start(() => {
@@ -165,7 +165,7 @@ describe('Broadcast', () => {
             const server = TestHelpers.createTestServer((request, reply) => {
 
                 expect(request.payload.events).to.equal('test event');
-                reply(200);
+                return reply(200);
             });
 
             const write = process.stdout.write;
@@ -242,8 +242,9 @@ describe('Broadcast', () => {
             const server = TestHelpers.createTestServer((request, reply) => {
 
                 expect(request.payload.events.length).to.equal(2);
-                reply().code(200);
+                return reply().code(200);
             });
+
             const resume = TestHelpers.uniqueFilename();
 
             server.start(() => {
@@ -281,11 +282,13 @@ describe('Broadcast', () => {
 
             const server = TestHelpers.createTestServer((request, reply) => {
 
-                reply().code(200);
+                return reply().code(200);
             });
+
             const open = Fs.open;
             const log = console.error;
             const file = TestHelpers.uniqueFilename();
+
             server.start(() => {
 
                 const config = TestHelpers.writeConfig({
@@ -323,8 +326,9 @@ describe('Broadcast', () => {
 
             const server = TestHelpers.createTestServer((request, reply) => {
 
-                reply().code(200);
+                return reply().code(200);
             });
+
             server.start(() => {
 
                 const config = TestHelpers.writeConfig({
@@ -353,8 +357,9 @@ describe('Broadcast', () => {
             const server = TestHelpers.createTestServer((request, reply) => {
 
                 expect(request.payload.events.length).to.equal(1);
-                reply().code(200);
+                return reply().code(200);
             });
+
             const resume = TestHelpers.uniqueFilename();
             Fs.writeFileSync(resume, 252);
 
@@ -395,11 +400,11 @@ describe('Broadcast', () => {
 
         it('logs an error if there is an async error', (done) => {
 
+            let output = '';
             const original = Utils.recursiveAsync;
             const log = console.error;
             const info = console.info;
             const exit = process.exit;
-            let output = '';
             const config = TestHelpers.writeConfig({
                 log: './test/fixtures/test_01.log',
                 url: 'http://127.0.0.1:9001'
@@ -463,7 +468,6 @@ describe('Broadcast', () => {
                     console.error = log;
                     expect(error).to.equal('simulated Fs error');
                 };
-
 
                 iterator(init, (error, value) => {
 
@@ -539,8 +543,9 @@ describe('Broadcast', () => {
 
         it('starts from the beginning of log file if it has been truncated', (done) => {
 
-            const log = TestHelpers.uniqueFilename();
             let runCount = 0;
+            const log = TestHelpers.uniqueFilename();
+
             const server = TestHelpers.createTestServer((request, reply) => {
 
                 const id = Hoek.reach(request, 'payload.events.0.id');
@@ -565,21 +570,17 @@ describe('Broadcast', () => {
                     expect(id).to.equal(TestHelpers.inlineLogEntry.lineThree.id);
                     done();
                 }
-                reply().code(200);
+
+                return reply().code(200);
             });
 
             server.start(() => {
 
                 const url = server.info.uri;
-                const config = TestHelpers.writeConfig({
-                    log: log,
-                    url: url
-                });
+                const config = TestHelpers.writeConfig({ log, url });
 
                 Fs.writeFileSync(log, TestHelpers.inlineLogEntry.lineTwo.toString());
-
                 Broadcast.run(['-c', config]);
-
             });
 
         });
@@ -603,10 +604,57 @@ describe('Broadcast', () => {
             };
 
             Broadcast.run(['-c', config]);
-
         });
     });
 
+    describe('batching', () => {
+
+        it('', (done) => {
+
+            const original = Utils.recursiveAsync;
+            const log = console.error;
+            const info = console.info;
+            const exit = process.exit;
+            let output = '';
+            const config = TestHelpers.writeConfig({
+                log: './test/fixtures/test_01.log',
+                url: 'http://127.0.0.1:9001'
+            });
+
+            console.error = function (error) {
+
+                output += error.message || error;
+            };
+
+            console.info = function (value) {
+
+                expect(value).to.equal('Retrying broadcast in %s milliseconds');
+            };
+
+            process.exit = function (code) {
+
+                expect(code).to.equal(1);
+                expect(output).to.contain('async error');
+
+                process.exit = exit;
+                Utils.recursiveAsync = original;
+                console.error = log;
+                console.info = info;
+
+                done();
+            };
+
+            Utils.recursiveAsync = function (init, iterator, callback) {
+
+                iterator(init, (value, error) => {
+
+                    callback(new Error('async error'));
+                });
+            };
+
+            Broadcast.run(['-c', config]);
+        });
+    });
 
     it('provides an empty stats object if the file can not be opened', (done) => {
 
@@ -634,6 +682,5 @@ describe('Broadcast', () => {
         };
 
         Broadcast.run(['-c', config]);
-
     });
 });
