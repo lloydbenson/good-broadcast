@@ -24,12 +24,7 @@ exports.createTestServer = function (options, handler) {
     const server = new Hapi.Server();
     server.connection({ host: options.host, port: options.port });
 
-    server.route({
-        path: '/',
-        method: 'POST',
-        handler: handler
-    });
-
+    server.route({ path: '/', method: 'POST', handler });
     return server;
 };
 
